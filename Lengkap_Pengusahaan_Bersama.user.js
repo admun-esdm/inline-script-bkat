@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.0
+// @version      3.8.1
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -26,15 +26,18 @@
 // (menu Tampermonkey -> "Pengaturan INLINE"), sehingga pembaruan otomatis dari GitHub tidak menghapusnya.
 // Pengelola cukup mengisi URL penerima Sheets bersama di bawah ini sekali (sama untuk semua evaluator).
 const WEB_APP_URL_BERSAMA='https://script.google.com/macros/s/AKfycbzrKfHNBo7uUmWWVwjxrqtJIQBqRZ-ZR8rzwfxvxMEH2FLtOaKrGlsWp5G00E-Rs6RL/exec';
+// Bila Apps Script Drive memakai satu deployment untuk semua evaluator (dijalankan sebagai pengguna yang mengakses), isi di sini juga.
+const DRIVE_WEB_APP_URL_BERSAMA='https://script.google.com/macros/s/AKfycbwQTme5qJgbRWULQw-v9pMXKP-AUPvmhnk2-Feu5A50jUFAGHcLiHVWWUhhKalu0SqAeA/exec';
 const EXEC_URL=/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/;
 const CFG={url:'inline_cfg_web_app_url',token:'inline_cfg_token',drive:'inline_cfg_drive_url'};
 let WEB_APP_URL,TOKEN,DRIVE_WEB_APP_URL;
 function loadConfig(){
  const shared=EXEC_URL.test(WEB_APP_URL_BERSAMA)?WEB_APP_URL_BERSAMA:'';
+ const sharedDrive=EXEC_URL.test(DRIVE_WEB_APP_URL_BERSAMA)?DRIVE_WEB_APP_URL_BERSAMA:'';
  WEB_APP_URL=shared||GM_getValue(CFG.url,'')||'ISI_URL_WEB_APP_DI_SINI';
  TOKEN=GM_getValue(CFG.token,'')||'ISI_TOKEN_DI_SINI';
- DRIVE_WEB_APP_URL=GM_getValue(CFG.drive,'')||'ISI_URL_WEB_APP_DRIVE_AKUN_EVALUATOR';
- return {shared};
+ DRIVE_WEB_APP_URL=sharedDrive||GM_getValue(CFG.drive,'')||'ISI_URL_WEB_APP_DRIVE_AKUN_EVALUATOR';
+ return {shared,sharedDrive};
 }
 loadConfig();
 const driveJobKey=id=>'inline-drive-user:'+id;
@@ -139,7 +142,7 @@ if(window!==window.top)return;
 // Jendela Pengaturan INLINE: muncul sendiri bila token belum diisi, dan dapat dibuka dari menu Tampermonkey.
 function openSettings(first){
  if(document.getElementById('inline-settings-dialog'))return;
- const {shared}=loadConfig();
+ const {shared,sharedDrive}=loadConfig();
  const d=document.createElement('dialog');d.id='inline-settings-dialog';
  d.style.cssText='width:min(620px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
  const field=(id,label,value,hint,type='text')=>`<label for="${id}" style="display:block;font-weight:bold;margin-top:12px">${label}</label><input id="${id}" type="${type}" autocomplete="off" spellcheck="false" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 2px;padding:9px;border:1px solid #9caabc;border-radius:6px;font:13px monospace" value="${String(value).replace(/"/g,'&quot;')}"><div style="color:#667;font-size:12px">${hint}</div>`;
@@ -149,7 +152,7 @@ function openSettings(first){
  ${shared?'<div style="margin-top:12px;color:#556;font-size:12px">URL penerima Sheets bersama sudah diatur oleh pengelola.</div>':field('inline-cfg-url','URL penerima Sheets bersama (WEB_APP_URL)',cur('url'),'Dari pengelola. Berakhiran /exec.')}
  ${field('inline-cfg-token','TOKEN evaluator',cur('token'),'Token milik Anda dari pengelola.','password')}
  <label style="font-size:12px;color:#556"><input type="checkbox" id="inline-cfg-show"> tampilkan token</label>
- ${field('inline-cfg-drive','URL Apps Script Drive akun Anda (DRIVE_WEB_APP_URL)',cur('drive'),'Untuk tombol Simpan Lampiran ke Drive. Berakhiran /exec. Boleh dikosongkan bila tidak dipakai.')}
+ ${sharedDrive?'':field('inline-cfg-drive','URL Apps Script Drive akun Anda (DRIVE_WEB_APP_URL)',cur('drive'),'Untuk tombol Simpan Lampiran ke Drive. Berakhiran /exec. Boleh dikosongkan bila tidak dipakai.')}
  <div role="alert" hidden style="margin-top:12px;color:#b42318"></div>
  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button type="button" data-act="cancel" style="padding:9px 16px;border:0;border-radius:6px;background:#e4e7ec;cursor:pointer">Nanti</button><button type="submit" style="padding:9px 16px;border:0;border-radius:6px;background:#1f6f43;color:#fff;font-weight:bold;cursor:pointer">Simpan</button></div></form>`;
  const q=s=>d.querySelector(s),err=q('[role=alert]');
@@ -157,12 +160,12 @@ function openSettings(first){
  const close=()=>{d.close();d.remove();};
  q('[data-act=cancel]').onclick=close;d.addEventListener('cancel',close);
  q('form').onsubmit=e=>{
-  e.preventDefault();const url=(q('#inline-cfg-url')?.value||'').trim(),token=q('#inline-cfg-token').value.trim(),drive=q('#inline-cfg-drive').value.trim();
+  e.preventDefault();const url=(q('#inline-cfg-url')?.value||'').trim(),token=q('#inline-cfg-token').value.trim(),drive=(q('#inline-cfg-drive')?.value||'').trim();
   const fail=m=>{err.hidden=false;err.textContent=m;};
   if(!shared&&!EXEC_URL.test(url))return fail('URL penerima Sheets harus berbentuk https://script.google.com/macros/s/.../exec');
   if(!token||/\s/.test(token)||/^ISI_/i.test(token))return fail('Isi TOKEN evaluator.');
   if(drive&&!EXEC_URL.test(drive))return fail('URL Drive harus berbentuk https://script.google.com/macros/s/.../exec (atau kosongkan).');
-  if(!shared)GM_setValue(CFG.url,url);GM_setValue(CFG.token,token);GM_setValue(CFG.drive,drive);
+  if(!shared)GM_setValue(CFG.url,url);GM_setValue(CFG.token,token);if(!sharedDrive)GM_setValue(CFG.drive,drive);
   loadConfig();close();alert('Pengaturan INLINE tersimpan.');
  };
  document.body.append(d);d.showModal();
