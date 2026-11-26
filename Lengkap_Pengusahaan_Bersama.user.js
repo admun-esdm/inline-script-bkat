@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.10.0
+// @version      3.10.1
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -573,7 +573,7 @@ async function attachments(button,drive=false,job=null){
   const fileTitle=attachmentTitle(title,/dewatering/i.test(detail('Jenis Izin')));
   files.push({name:folder+'/'+String(count).padStart(2,'0')+' - '+safe(fileTitle)+'.pdf',bytes});
  }
- if(drive)return job?.panel?await uploadDriveAkun(province,folder,files,button,job.panel):await writeDrive(province,folder,files,button,job);
+ if(drive)return job?.panel?await uploadDriveAkun(province,folder,files,button,job.panel,job.auth):await writeDrive(province,folder,files,button,job);
  else await writeFolder(destination,folder,files,button);
 }
 
@@ -648,24 +648,38 @@ async function clearDriveJob(id){const meta=await GM_getValue(driveJobKey(id));f
 const DRIVE_AKUN={email:'aira_drive_email',idx:'aira_drive_index',cache:'aira_drive_auth'};
 async function startDriveAccountUpload(button){
  if(!EXEC_URL.test(DRIVE_WEB_APP_URL))throw Error('URL Apps Script Drive belum diatur. Klik ikon Tampermonkey → Pengaturan INLINE.');
+ // R21b: jendela kecil Google HARUS dibuka langsung saat tombol diklik (sebelum membaca lampiran),
+ // karena browser hanya mengizinkan pop-up yang muncul seketika setelah klik.
+ const tunai=v=>v&&typeof v.then!=='function'?v:null;
+ const want=String(tunai(GM_getValue(DRIVE_AKUN.email,''))||'').toLowerCase(),cached=tunai(GM_getValue(DRIVE_AKUN.cache,null));
+ const perluJendela=!(cached&&cached.exp>Date.now()+5*60*1000&&(!want||cached.email===want));
+ let pre=null;
+ if(perluJendela){
+  pre=window.open('about:blank','aira-drive-akun','popup=yes,width=520,height=640');
+  if(!pre)throw Error('Chrome memblokir jendela kecil Google untuk INLINE. Klik ikon pop-up terblokir di ujung kanan kolom alamat → pilih "Selalu izinkan pop-up dari ngantor.esdm.go.id" → Selesai, lalu klik Simpan Lampiran ke Drive lagi.');
+  try{pre.document.write('<title>AIRA · Menghubungkan akun Google</title><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fffdf0;font:600 14px Segoe UI,Arial,sans-serif;color:#1d2939"><div style="background:#fff;border-top:6px solid #f5e62a;border-radius:16px;padding:22px 26px;box-shadow:0 18px 48px rgba(16,24,40,.18)"><div style="font:800 11px Segoe UI,Arial;letter-spacing:.08em;color:#6b6413">AIRA · SIMPAN LAMPIRAN KE DRIVE</div>Menghubungkan akun Google…</div></body>');}catch{}
+ }
  const panel=openDrivePanel();
- try{const r=await attachments(button,true,{panel});if(r===undefined)panel.close();return r;}
- catch(e){panel.fail(e.message);throw e;}
+ try{
+  const auth=await driveAkses(panel,false,pre);
+  const r=await attachments(button,true,{panel,auth});if(r===undefined)panel.close();return r;
+ }
+ catch(e){try{pre&&!pre.closed&&pre.close();}catch{}panel.fail(e.message);throw e;}
 }
 function driveAuthUrl(idx,job){return (idx>0?DRIVE_WEB_APP_URL.replace('/macros/s/','/macros/u/'+idx+'/s/'):DRIVE_WEB_APP_URL)+'?mode=auth&job='+encodeURIComponent(job);}
-async function driveAkses(panel,force=false){
+async function driveAkses(panel,force=false,pre=null){
  const want=String(await GM_getValue(DRIVE_AKUN.email,'')||'').toLowerCase();
  const cached=await GM_getValue(DRIVE_AKUN.cache,null);
- if(!force&&cached&&cached.exp>Date.now()+5*60*1000&&(!want||cached.email===want))return cached;
+ if(!force&&cached&&cached.exp>Date.now()+5*60*1000&&(!want||cached.email===want)){try{pre&&!pre.closed&&pre.close();}catch{}return cached;}
  const saved=Number(await GM_getValue(DRIVE_AKUN.idx,0))||0,order=[saved,...[0,1,2,3,4,5].filter(n=>n!==saved)];
  const job=crypto.randomUUID();await GM_setValue(driveJobKey(job),{createdAt:Date.now(),kind:'auth'});
- let win=null;
+ let win=pre;
  try{
   for(let k=0;k<order.length;k++){
    const idx=order[k];panel.step('Menghubungkan akun Google'+(want?' '+want:'')+'…');
    panel.ask('Jendela kecil Google terbuka sebentar untuk mengambil akses akun, lalu tertutup sendiri. Bila Google meminta login atau izin, selesaikan di jendela itu.',[{t:'Coba akun berikutnya',v:'next'},{t:'Batal',v:'cancel'}]);
    await GM_setValue(driveJobKey(job),{createdAt:Date.now(),kind:'auth'});
-   if(!win||win.closed){win=window.open(driveAuthUrl(idx,job),'aira-drive-akun','popup=yes,width=520,height=640');if(!win)throw Error('Browser memblokir jendela kecil Google. Izinkan pop-up untuk INLINE (ikon di ujung kanan kolom alamat), lalu ulangi.');}
+   if(!win||win.closed){win=window.open(driveAuthUrl(idx,job),'aira-drive-akun','popup=yes,width=520,height=640');if(!win)throw Error('Chrome memblokir jendela kecil Google untuk INLINE. Klik ikon pop-up terblokir di ujung kanan kolom alamat → pilih "Selalu izinkan pop-up dari ngantor.esdm.go.id" → Selesai, lalu klik Simpan Lampiran ke Drive lagi.');}
    else win.location.href=driveAuthUrl(idx,job);
    const got=await new Promise(resolve=>{const t=setInterval(async()=>{
      if(win.closed){clearInterval(t);resolve({cancel:'Jendela Google ditutup sebelum akun terhubung.'});return;}
@@ -678,9 +692,8 @@ async function driveAkses(panel,force=false){
    const a=got.auth;
    if(want&&a.email!==want){panel.step('Akun '+a.email+' bukan akun Drive Anda, mencoba akun lain…');continue;}
    if(!want){
-    try{win.close();}catch{}
     const v=await panel.askWait('Akun Google terdeteksi: <b>'+a.email.replace(/[<>&]/g,'')+'</b>. Simpan lampiran memakai akun ini? Pilihan ini diingat.',[{t:'Ya, pakai akun ini',v:'yes',primary:true},{t:'Akun lain',v:'other'}]);
-    if(v!=='yes'){win=null;continue;}
+    if(v!=='yes')continue;
     await GM_setValue(DRIVE_AKUN.email,a.email);
    }
    await GM_setValue(DRIVE_AKUN.idx,idx);await GM_setValue(DRIVE_AKUN.cache,a);panel.ask('');return a;
@@ -700,10 +713,10 @@ async function driveCari(token,parent,name,folderOnly){
  const q='name = '+DRIVE_Q(name)+' and '+DRIVE_Q(parent)+' in parents and trashed = false'+(folderOnly?" and mimeType = 'application/vnd.google-apps.folder'":'');
  return (await gapi('GET',DRIVE_API+'?supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,size)&q='+encodeURIComponent(q),token)).v?.files||[];
 }
-async function uploadDriveAkun(province,folder,files,button,panel){
+async function uploadDriveAkun(province,folder,files,button,panel,akses){
  if(files.length>100)throw Error('Maksimal 100 PDF.');
  const names=files.map(f=>f.name.slice(f.name.indexOf('/')+1));
- let auth=await driveAkses(panel);
+ let auth=akses||await driveAkses(panel);
  const withAuth=async fn=>{try{return await fn(auth.token);}catch(e){if(e.status!==401)throw e;await GM_deleteValue(DRIVE_AKUN.cache);auth=await driveAkses(panel,true);return await fn(auth.token);}};
  const parent=auth.folders?.[province];if(!parent)throw Error('Folder Drive provinsi '+province+' belum diatur pada project Drive.');
  panel.files(names);panel.step('Membuat folder di Drive '+province+'…');panel.account(auth.email);
