@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.10.1
+// @version      3.10.3
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -207,6 +207,7 @@ async function bootDriveAccountBridge(){
    const meta=await GM_getValue(driveJobKey(job));if(!meta||Date.now()-meta.createdAt>30*60*1000)throw Error('Sesi lampiran berakhir/tidak ditemukan pada profil browser ini. Kembali ke INLINE dan periksa folder sebelum memulai ulang.');
    if(q.kind==='auth'){const a=q.data||{};if(meta.kind!=='auth'||typeof a.token!=='string'||!a.token||typeof a.email!=='string'||!a.email||!a.folders||typeof a.folders!=='object')throw Error('Data akun tidak valid.');
     await GM_setValue(driveJobKey(job),{...meta,auth:{email:a.email.toLowerCase(),token:a.token,exp:Date.now()+50*60*1000,folders:a.folders}});response={ok:true};}
+   else if(q.kind==='manifest'&&meta.kind==='auth'){await GM_setValue(driveJobKey(job),{...meta,halamanLama:true});throw Error('Project Apps Script Drive belum diperbarui ke R21. Tutup jendela ini.');}
    else if(q.kind==='manifest'){const seen={...meta,bridgeSeenAt:Date.now()};await GM_setValue(driveJobKey(job),seen);response=seen;}
    else if(q.kind==='file'){if(meta.status!=='uploading'||!Number.isInteger(q.index)||q.index<0||q.index>=meta.names.length)throw Error('Permintaan PDF tidak valid.');response={base64:await GM_getValue(driveJobKey(job)+':'+q.index)};if(!response.base64)throw Error('PDF tidak tersedia.');}
    else if(q.kind==='status'){const allowed=['uploading','success','error'];if(!allowed.includes(q.data?.status))throw Error('Status tidak valid.');const next={...meta,status:q.data.status,account:String(q.data.account||''),written:Number(q.data.written)||0,folderUrl:String(q.data.folderUrl||''),folderName:String(q.data.folderName||''),message:String(q.data.message||'')};await GM_setValue(driveJobKey(job),next);if(next.status==='success')for(let i=0;i<meta.names.length;i++)await GM_deleteValue(driveJobKey(job)+':'+i);response={ok:true};}
@@ -683,7 +684,7 @@ async function driveAkses(panel,force=false,pre=null){
    else win.location.href=driveAuthUrl(idx,job);
    const got=await new Promise(resolve=>{const t=setInterval(async()=>{
      if(win.closed){clearInterval(t);resolve({cancel:'Jendela Google ditutup sebelum akun terhubung.'});return;}
-     const m=await GM_getValue(driveJobKey(job));if(m?.auth){clearInterval(t);resolve({auth:m.auth});}
+     const m=await GM_getValue(driveJobKey(job));if(m?.auth){clearInterval(t);resolve({auth:m.auth});}else if(m?.halamanLama){clearInterval(t);resolve({cancel:'Project Apps Script Drive (akun evaluator) belum diperbarui: halaman Google yang terbuka masih versi lama. Admin perlu menambahkan file Ambil_Akses.html dan memperbarui kode .gs (R21), lalu Deploy → Manage deployments → New version.'});}
     },400);
     panel.onAnswer(v=>{clearInterval(t);resolve(v==='next'?{next:true}:{cancel:'Dibatalkan.'});});
     setTimeout(()=>{clearInterval(t);resolve({next:true});},4*60*1000);});
@@ -1271,7 +1272,11 @@ async function returnRun(){
  if(!permit||!tracking||!company||!province)throw Error('Identitas Pengembalian belum lengkap. Pastikan Detil Permohonan dan nama perusahaan pada Data Permohonan sudah termuat.');
  const note=returnLatestNote(await returnReadHistory(),identity.authors);
  // Tanpa ID Izin OSS (Persetujuan): kolom id diisi nomor tracking, sama seperti Master data.
- const result=await returnRpc('pengembalian',{id:(id&&!/^-+$/.test(id))?id:(kind?tracking:id),tracking,company,province,permit,note:note.text,noteAuthor:note.author,noteTime:note.timestamp,clickedAt});
+ const idKirim=(id&&!/^-+$/.test(id))?id:(kind?tracking:id);
+ // 27/11/2026: konfirmasi sebelum dicatat, seperti Kirim ke OSS Adit.
+ const baris=[['Jenis izin',permit],['Tracking',tracking],['ID Izin OSS',idKirim&&idKirim!==tracking?idKirim:''],['Nama',company],['Provinsi',province],['Evaluator',note.author],['Waktu catatan',note.timestamp],['Catatan',note.text]];
+ if(!await AIRA_MODAL.confirm(baris.filter(([,v])=>v&&String(v).trim()).map(([k,v])=>k+': '+String(v).replace(/\s*\n+\s*/g,' ').trim()).join('\n'),{title:'Catat pengembalian berkas?',ok:'Kirim',source:'Pengembalian',width:540}))return;
+ const result=await returnRpc('pengembalian',{id:idKirim,tracking,company,province,permit,note:note.text,noteAuthor:note.author,noteTime:note.timestamp,clickedAt});
  driveResult((result.already?'Sudah tercatat':'Proses Berhasil')+'\nPengembalian tercatat pada baris '+result.row+'.\nEvaluator: '+(result.nama||note.author||result.evaluator)+'\nTanggal pengembalian: '+result.date+'\nWaktu catatan: '+note.timestamp,'https://docs.google.com/spreadsheets/d/1ZW9nmnYmrNIPVGifHxo0CBPweDHgj9WRIwWpo-59owE/edit');
 }
 button('Pengembalian',420,()=>returnRun());
