@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.4
+// @version      3.8.5
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -40,6 +40,17 @@ function loadConfig(){
  return {shared,sharedDrive};
 }
 loadConfig();
+// CSS halaman INLINE mengubah warna/huruf tombol dan isian. Semua gaya dialog script dikunci dengan !important.
+function lockDialogStyle(root){
+ const base={'font-family':'Arial,Helvetica,sans-serif','text-shadow':'none','letter-spacing':'normal','text-transform':'none','box-shadow':'none'};
+ for(const el of [root,...root.querySelectorAll('*')]){
+  const own=[...el.style].map(p=>[p,el.style.getPropertyValue(p)]);
+  if(/^(BUTTON|INPUT|TEXTAREA|SELECT|LABEL|H2|H3|P|DIV|SPAN|B|SMALL|FORM)$/.test(el.tagName))for(const [k,v] of Object.entries(base))if(!el.style.getPropertyValue(k))el.style.setProperty(k,v,'important');
+  if(/^(BUTTON|INPUT|TEXTAREA|SELECT)$/.test(el.tagName)){if(!el.style.getPropertyValue('color'))el.style.setProperty('color','#24344a','important');if(!el.style.getPropertyValue('background'))el.style.setProperty('background',el.tagName==='BUTTON'?'#e4e7ec':'#fff','important');el.style.setProperty('opacity','1','important');}
+  for(const [k,v] of own)el.style.setProperty(k,v,'important');
+ }
+ root.style.setProperty('color','#24344a','important');
+}
 const driveJobKey=id=>'inline-drive-user:'+id;
 async function bootDriveAccountBridge(){
  const marker='inline-drive-account-r4';let root=null;
@@ -168,7 +179,7 @@ function openSettings(first){
   if(!shared)GM_setValue(CFG.url,url);GM_setValue(CFG.token,token);if(!sharedDrive)GM_setValue(CFG.drive,drive);
   loadConfig();close();alert('Pengaturan INLINE tersimpan.');
  };
- document.body.append(d);d.showModal();
+ lockDialogStyle(d);document.body.append(d);d.showModal();
 }
 try{GM_registerMenuCommand('Pengaturan INLINE (URL & token)',()=>openSettings(false));}catch{}
 if(/^ISI_/.test(TOKEN)||/^ISI_/.test(WEB_APP_URL))setTimeout(()=>openSettings(true),1200);
@@ -514,7 +525,7 @@ function chooseMasterNote(auto){
    if(!v){err.hidden=false;err.textContent='Catatan tidak boleh kosong.';return;}
    if(v.length>5000){err.hidden=false;err.textContent='Catatan maksimal 5.000 karakter.';return;}
    finish(v);};
-  document.body.append(d);d.showModal();ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
+  lockDialogStyle(d);document.body.append(d);d.showModal();ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
  });
 }
 function chooseTargetRow(){
@@ -596,7 +607,7 @@ function chooseImbuhanNote(){
    if(custom&&!text){err.hidden=false;err.textContent='Tulis catatannya, atau pilih Sesuai.';return;}
    if(text.length>5000){err.hidden=false;err.textContent='Catatan maksimal 5.000 karakter.';return;}
    finish(custom?text:'Sesuai');};
-  document.body.append(d);d.showModal();
+  lockDialogStyle(d);document.body.append(d);d.showModal();
  });
 }
 async function completeImbuhan(clicked){
