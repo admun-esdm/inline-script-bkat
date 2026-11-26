@@ -8,7 +8,7 @@ Klik **Pasang** pada setiap baris, lalu pilih **Install / Update / Reinstall** d
 | INLINE Unduh KML Lokasi Proyek | 1.31 | Cek Lokasi Sumur, saran debit & masa berlaku, Isi Otomatis, Unduh KML | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lokasi_Proyek_KML.user.js) |
 | INLINE Data Wilayah Sumur | 1.3.12 | Data wilayah (desa, CAT, zona) untuk Cek Lokasi Sumur dan Data Lengkap | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Wilayah_Sumur.user.js) |
 | INLINE Salin Data Teknis Pemohon | 1.3 | Salin Data Teknis pemohon ke isian evaluator | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Salin_Data_Teknis_Pemohon.user.js) |
-| INLINE Panel Tombol | 2.4 | Panel tombol yang dapat diminimalkan | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Panel_Tombol_INLINE.user.js) |
+| INLINE Panel Tombol | 2.5 | Panel tombol yang dapat diminimalkan | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Panel_Tombol_INLINE.user.js) |
 
 ## Setelah memasang
 1. Refresh halaman INLINE.

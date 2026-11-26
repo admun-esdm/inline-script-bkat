@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Panel Tombol
 // @namespace    inline-rekan
-// @version      2.4
+// @version      2.5
 // @description  AIRA — Alat Bantu Verifikasi dan Evaluasi Perizinan Air Tanah (panel tombol INLINE)
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -128,7 +128,6 @@ function adopt(){
   if(!t||button.style.position!=='fixed')continue;
   button.style.position='static';button.style.removeProperty('right');button.style.removeProperty('bottom');button.style.removeProperty('z-index');
   button.type='button';button.dataset.irp=label;button.dataset.group=t.group;button.dataset.icon=t.icon;button.dataset.hint=t.hint;button.style.order=String(t.order);
-  if(t.group==='kirim'&&label!=='Kirim ke OSS Adit')button.classList.add('irp-primary');
   lists[t.group].append(button);
  }
 }
