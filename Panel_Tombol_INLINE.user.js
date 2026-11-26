@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Panel Tombol
 // @namespace    inline-rekan
-// @version      2.5
+// @version      2.6
 // @description  AIRA — Alat Bantu Verifikasi dan Evaluasi Perizinan Air Tanah (panel tombol INLINE)
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -105,7 +105,28 @@ ${P}.t-ubin button[data-irp]{grid-template-columns:1fr;grid-template-rows:auto a
 ${P}.t-ubin button[data-irp]::before{grid-row:auto;width:38px;height:38px;border-radius:12px;font-size:18px}
 ${P}.t-ubin button[data-irp]::after{display:none}
 ${P}.t-ubin button[data-irp]{order:var(--o)}
-`;
+/* ===== Gerak halus ===== */
+${P}{transform-origin:bottom right}
+${P}.irp-anim{animation:irp-pop .24s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes irp-pop{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+${P} .irp-body{animation:irp-fade .22s ease-out}
+@keyframes irp-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+${P} button[data-irp]{position:relative!important;overflow:hidden;transition:background .18s ease,border-color .18s ease,transform .16s cubic-bezier(.2,.9,.3,1.3),box-shadow .18s ease!important}
+${P} button[data-irp]:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(17,17,17,.10)!important}
+${P} button[data-irp]:active{transform:translateY(0) scale(.97);box-shadow:0 1px 3px rgba(17,17,17,.10)!important;transition-duration:.08s!important}
+${P} button[data-irp]::before{transition:transform .2s cubic-bezier(.2,.9,.3,1.4)}
+${P} button[data-irp]:hover::before{transform:scale(1.08) rotate(-4deg)}
+${P} button[data-irp]:disabled::before{animation:irp-pulse 1s ease-in-out infinite}
+@keyframes irp-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.9);opacity:.55}}
+${P} .irp-ripple{position:absolute;border-radius:50%;pointer-events:none;background:rgba(245,230,42,.55);transform:scale(0);animation:irp-ripple .55s ease-out forwards}
+@keyframes irp-ripple{to{transform:scale(1);opacity:0}}
+${P} .irp-head{transition:background .18s ease}
+${P} .irp-chev{transition:transform .25s cubic-bezier(.2,.9,.3,1.2)!important}
+${P} .irp-logo{transition:transform .3s cubic-bezier(.2,.9,.3,1.4)}
+${P} .irp-head:hover .irp-logo{transform:rotate(-8deg) scale(1.06)}
+${P} details[open] p{animation:irp-fade .2s ease-out}
+@media (prefers-reduced-motion:reduce){${P},${P} *{animation:none!important;transition:none!important}}
+`
 const style=document.createElement('style');style.id='inline-rekan-tools-style';style.textContent=css;document.head.append(style);
 const panel=document.createElement('section');panel.id='inline-rekan-tools-panel';panel.className='t-'+TEMA;panel.setAttribute('aria-label','AIRA');
 const head=document.createElement('button');head.type='button';head.className='irp-head';head.setAttribute('aria-controls','inline-rekan-tools-body');
@@ -118,8 +139,8 @@ tip.innerHTML='<summary>Tips penulisan akuifer</summary><p>Di INLINE gunakan <b>
 body.append(tip);
 const foot=document.createElement('div');foot.className='irp-foot';foot.innerHTML='<img alt="Kementerian ESDM" src="'+LOGO_PENUH+'"><span>© BKAT 2026</span>';
 panel.append(head,body,foot);document.body.append(panel);
-function render(){panel.classList.toggle('irp-collapsed',collapsed);head.setAttribute('aria-expanded',String(!collapsed));head.title=collapsed?'Tampilkan AIRA':'Sembunyikan';}
-head.onclick=()=>{collapsed=!collapsed;render();try{localStorage.setItem(key,collapsed?'1':'0');}catch{}};
+function render(animate){panel.classList.toggle('irp-collapsed',collapsed);if(animate){panel.classList.remove('irp-anim');void panel.offsetWidth;panel.classList.add('irp-anim');}head.setAttribute('aria-expanded',String(!collapsed));head.title=collapsed?'Tampilkan AIRA':'Sembunyikan';}
+head.onclick=()=>{collapsed=!collapsed;render(true);try{localStorage.setItem(key,collapsed?'1':'0');}catch{}};
 render();
 function adopt(){
  for(const button of document.querySelectorAll('button')){
@@ -131,6 +152,15 @@ function adopt(){
   lists[t.group].append(button);
  }
 }
+// Efek riak (ripple) saat tombol ditekan. Elemen riak tidak berisi teks, jadi label tombol tidak berubah.
+panel.addEventListener('pointerdown',e=>{
+ const b=e.target.closest('button[data-irp]');if(!b||b.disabled||!panel.contains(b))return;
+ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch{}
+ const r=b.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2,s=document.createElement('span');
+ s.className='irp-ripple';s.setAttribute('aria-hidden','true');
+ s.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-r.left-size/2)+'px;top:'+(e.clientY-r.top-size/2)+'px';
+ b.append(s);setTimeout(()=>s.remove(),600);
+});
 adopt();
 new MutationObserver(adopt).observe(document.body,{childList:true,subtree:true});
 })();
