@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Panel Tombol
 // @namespace    inline-rekan
-// @version      2.10
+// @version      2.12
 // @description  AIRA — Alat Bantu Verifikasi dan Evaluasi Perizinan Air Tanah (panel tombol INLINE)
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -80,6 +80,10 @@ ${P} button[data-group=evaluasi]{--main:#b54708;--soft:#fffaeb;--edge:#fedf89}
 ${P} button[data-group=lampiran]{--main:#175cd3;--soft:#eff8ff;--edge:#b2ddff}
 ${P} button[data-group=lain]{--main:#475467;--soft:#f2f4f7;--edge:#d0d5dd}
 ${P} button[data-irp="Pengembalian"]{--main:#b42318;--soft:#fef3f2;--edge:#fecdca}
+${P} .irp-help{all:unset;box-sizing:border-box;width:24px;height:24px;border-radius:50%!important;background:#111!important;color:#f5e62a!important;display:grid;place-items:center;font-size:13px!important;font-weight:800!important;cursor:pointer;flex:none;transition:transform .2s cubic-bezier(.2,.9,.3,1.4),background .15s}
+${P} .irp-help:hover{transform:scale(1.12)}
+${P} .irp-help:active{transform:scale(.95)}
+${P} .irp-help:focus-visible{outline:2px solid #111!important;outline-offset:2px}
 ${P} details{margin-top:12px;border:1px solid #fedf89;background:#fffcf5;border-radius:10px;padding:8px 10px;font-size:12px;color:#7a5a12}
 ${P} summary{cursor:pointer;font-weight:700;color:#93370d}
 ${P} details p{margin:6px 0 0}
@@ -142,7 +146,74 @@ for(const [id,title] of GROUPS){const g=document.createElement('div');g.classNam
 const tip=document.createElement('details');
 tip.innerHTML='<summary>Tips penulisan akuifer</summary><p>Di INLINE gunakan <b>#lt#</b> untuk &lt;, <b>#gt#</b> untuk &gt;, <b>#le#</b> untuk ≤, <b>#ge#</b> untuk ≥. Contoh: <b>#lt# 40</b> atau <b>#gt# 60</b>.</p><p>Pastikan <b>preview PDF produk izin berhasil</b> sebelum mengirim permohonan.</p>';
 body.append(tip);
+// ===== Petunjuk penggunaan (2.11) =====
+const PETUNJUK=[
+ ['Evaluasi',[
+  ['Salin Data Teknis Pemohon','⧉','Menyalin data teknis yang diisi pemohon ke Form Isian Evaluator INLINE ESDM.',['Daftar kolom yang akan disalin sebelum diproses','Perbandingan bila isian evaluator sudah berbeda: nilai lama dicoret, nilai pemohon hijau','Pilihan <b>Salin yang kosong saja</b> atau <b>Timpa dengan data pemohon</b>']],
+  ['Cek Lokasi Sumur','◎','Memeriksa lokasi setiap sumur dan memberi saran evaluasi.',['Posisi sumur terhadap lokasi proyek OSS','Desa, kecamatan, kabupaten/kota, provinsi','CAT, zona konservasi, dan debit optimum','Kawasan industri, zona bebas air tanah, skala usaha dari database izin','Saran debit dan masa berlaku, lalu tombol <b>Isi Otomatis</b> (Debit Hasil Evaluasi, Volume Harian, masa berlaku, skala, alamat) — semua nilai bisa diedit dulu'],'Perlu Data Wilayah diimpor sekali di PC ini. Hasil cek adalah saran, tetap diperiksa.'],
+  ['Unduh KML Lokasi Proyek','⌖','Mengunduh file KML lokasi proyek dari OSS untuk dibuka di Google Earth atau aplikasi GIS.',['File .kml lokasi proyek tersimpan di folder unduhan']]
+ ]],
+ ['Lampiran',[
+  ['Download Lampiran','⬇','Mengunduh semua PDF lampiran permohonan sekaligus ke satu folder di PC.',['Progres unduhan pada tombol (Download 3/12)','Nama file berurutan seperti di INLINE: 01 - …, 02 - …']],
+  ['Simpan Lampiran ke Drive','☁','Menyimpan semua lampiran ke Google Drive PATGTL (folder provinsi) dengan akun Google masing-masing.',['Jendela kecil Google sebentar; pertama kali, pilih akun Drive Anda (diingat)','Daftar PDF yang dicentang satu per satu dan bilah progres','Hasil: akun upload, folder, dan tautan <b>Buka folder di Google Drive</b>'],'Izinkan pop-up untuk ngantor.esdm.go.id. Ganti akun: ikon Tampermonkey → Ganti akun Google Drive (AIRA).']
+ ]],
+ ['Kirim data',[
+  
+  ['Data Lengkap (Pengusahaan / Persetujuan / Dewatering / Sumur Pantau/Imbuhan)','↗','Mengirim data permohonan ke Form Data Evaluator (Sheets bersama). Tombol hanya muncul sesuai jenis izin.',['Pop up <b>nomor baris + catatan</b>: baris kosong, baris permohonan ini (revisi), atau dipakai permohonan lain (diblokir)','Saat revisi: catatan terakhir dan catatan otomatis terbaru, dengan tombol <b>Perbarui</b> dan <b>Kembalikan catatan terakhir</b>','Ringkasan data untuk dicek sebelum dikirim'],'Sumur Imbuhan: catatan bawaan “Sesuai”, tanggal evaluasi terisi otomatis.']
+ ]],
+ ['Lainnya',[
+  ['Pengembalian','↩','Mencatat pengembalian berkas beserta catatan pengembaliannya ke rekap.',['Konfirmasi data yang akan dicatat','Hasil dengan nama lengkap evaluator dan waktu catatan']],
+  ['Impor Data Wilayah','⇪','Memasang atau memperbarui data wilayah (administrasi, CAT, zona) di PC ini.',['Cukup sekali per PC; ulangi bila ada pembaruan data wilayah']]
+ ]]
+];
+const PS='#aira-petunjuk';
+const pcss=`
+${PS}{width:min(560px,94vw);max-height:86vh;padding:0;border:0;border-radius:16px;box-shadow:0 24px 64px rgba(16,24,40,.35);overflow:hidden;color:#1d2939;background:#fff;font:14px/1.5 "Segoe UI",Arial,sans-serif}
+${PS}[open]{display:flex;flex-direction:column;animation:aira-pj-pop .28s cubic-bezier(.2,.9,.3,1.2)}
+${PS}::backdrop{background:rgba(16,24,40,.45);animation:aira-pj-fade .2s ease}
+${PS} *{box-sizing:border-box;font-family:"Segoe UI",Arial,sans-serif!important;letter-spacing:normal!important;text-transform:none!important}
+${PS} .pj-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#f5e62a;border-bottom:1px solid rgba(17,17,17,.12)}
+${PS} .pj-head h2{margin:0;font-size:17px!important;font-weight:700!important;color:#111!important;flex:1}
+${PS} .pj-head small{display:block;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;color:#6b6413!important}
+${PS} .pj-x{all:unset;cursor:pointer;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:18px;color:#111;transition:background .15s}
+${PS} .pj-x:hover{background:rgba(0,0,0,.08)}
+${PS} .pj-body{overflow:auto;padding:14px 20px 18px}
+${PS} .pj-intro{margin:0 0 10px;font-size:13px;color:#475467}
+${PS} .pj-grp{margin:14px 0 6px;font-size:11px!important;font-weight:800!important;letter-spacing:.1em!important;color:#6b6413!important;text-transform:uppercase!important}
+${PS} details{border:1px solid #eaecf0;border-radius:12px;margin:6px 0;background:#fff;transition:border-color .15s,background .15s}
+${PS} details[open]{border-color:#eee7a0;background:#fffdf0}
+${PS} summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:30px 1fr 16px;gap:10px;align-items:center;padding:10px 12px}
+${PS} summary::-webkit-details-marker{display:none}
+${PS} summary i{font-style:normal;width:30px;height:30px;border-radius:8px;background:#f5e62a;display:grid;place-items:center;font-weight:700;color:#111}
+${PS} summary b{display:block;font-size:13.5px;color:#101828}
+${PS} summary span{display:block;font-size:12px;color:#667085;line-height:1.4}
+${PS} summary em{font-style:normal;color:#98a2b3;transition:transform .2s}
+${PS} details[open] summary em{transform:rotate(90deg)}
+${PS} .pj-in{padding:0 14px 12px 52px;font-size:12.5px;color:#344054;animation:aira-pj-fade .2s ease}
+${PS} .pj-in ul{margin:4px 0 0;padding-left:18px}${PS} .pj-in li{margin:3px 0}
+${PS} .pj-in .pj-note{margin:8px 0 0;padding:7px 10px;border-radius:8px;background:#fffaeb;color:#93370d;font-size:12px}
+${PS} .pj-foot{padding:12px 20px;border-top:1px solid #eaecf0;font-size:12px;color:#667085;background:#fcfcfd}
+@keyframes aira-pj-pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes aira-pj-fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){${PS},${PS} *,${PS}::backdrop{animation:none!important;transition:none!important}}
+`;
+const pst=document.createElement('style');pst.textContent=pcss;document.head.append(pst);
+function bukaPetunjuk(){
+ document.getElementById('aira-petunjuk')?.remove();
+ const d=document.createElement('dialog');d.id='aira-petunjuk';d.setAttribute('aria-label','Petunjuk AIRA');
+ let h='<div class="pj-head"><div style="flex:1"><small>AIRA · PETUNJUK</small><h2>Fungsi setiap tombol</h2></div><button type="button" class="pj-x" aria-label="Tutup">✕</button></div><div class="pj-body"><p class="pj-intro">Klik nama tombol untuk melihat apa yang ditampilkan. Tombol di panel muncul sesuai halaman dan jenis izin yang sedang dibuka.</p>';
+ for(const [grp,items] of PETUNJUK){h+='<div class="pj-grp">'+grp+'</div>';for(const [nama,ikon,fungsi,tampil,catatan] of items){h+='<details><summary><i aria-hidden="true">'+ikon+'</i><div><b>'+nama+'</b><span>'+fungsi+'</span></div><em aria-hidden="true">›</em></summary><div class="pj-in">Yang ditampilkan:<ul>'+tampil.map(t=>'<li>'+t+'</li>').join('')+'</ul>'+(catatan?'<div class="pj-note">'+catatan+'</div>':'')+'</div></details>';}}
+ h+='</div><div class="pj-foot">Token evaluator: ikon Tampermonkey → <b>Pengaturan INLINE</b>. Kendala? Hubungi pengelola AIRA di BKAT.</div>';
+ d.innerHTML=h;document.body.append(d);
+ const tutup=()=>{d.close();d.remove();};
+ d.querySelector('.pj-x').onclick=tutup;d.addEventListener('close',()=>d.remove());
+ d.addEventListener('click',e=>{if(e.target===d)tutup();});
+ d.showModal();
+}
+const help=document.createElement('button');help.type='button';help.className='irp-help';help.textContent='?';help.title='Petunjuk: fungsi setiap tombol';help.setAttribute('aria-label','Petunjuk: fungsi setiap tombol');help.onclick=bukaPetunjuk;
+
 const foot=document.createElement('div');foot.className='irp-foot';foot.innerHTML='<span>© BKAT 2026</span>';
+foot.prepend(help);
 panel.append(head,body,foot);document.body.append(panel);
 function render(animate){panel.classList.toggle('irp-collapsed',collapsed);if(animate){panel.classList.remove('irp-anim');void panel.offsetWidth;panel.classList.add('irp-anim');}head.setAttribute('aria-expanded',String(!collapsed));head.title=collapsed?'Tampilkan AIRA':'Sembunyikan';}
 head.onclick=()=>{collapsed=!collapsed;render(true);try{localStorage.setItem(key,collapsed?'1':'0');}catch{}};
