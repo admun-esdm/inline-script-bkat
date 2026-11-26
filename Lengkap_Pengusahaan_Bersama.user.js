@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.1
+// @version      3.8.2
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -771,11 +771,15 @@ async function returnRun(){
  const clickedAt=Date.now(),identity=await returnRpc('pengembalian_profile',{});
  const permit=detail('Jenis Izin'),tracking=detail('Nomor Tracking'),id=detail('ID Izin (OSS)');
  let company=detail('Nama Pelaku Usaha')||detail('Nama Perusahaan')||row(document,'Nama Perusahaan')||labeled(document,'Nama Perusahaan');
- if(!company){try{company=(await frame()).nama;}catch{}}
- const province=clean(detail('Lokasi').split(/\s+-\s+/)[0]);
+ // R20: Persetujuan Penggunaan Air Tanah dan Sumur Pantau/Imbuhan memakai form dan label sendiri.
+ const kind=setujuJenis(permit)?'OSS_SETUJU':/sumur\s+pantau|imbuhan/i.test(permit)?'OSS_IMBUHAN':'';
+ let form=null;
+ if(!company||kind){try{form=kind?await frame(kind):await frame();if(!company)company=form?.nama||'';}catch{}}
+ const province=clean(detail('Lokasi').split(/\s+-\s+/)[0])||clean((permit.match(/(?:provinsi|wilayah)\s+(.+)$/i)||[])[1])||clean(form?.prov||'');
  if(!permit||!tracking||!company||!province)throw Error('Identitas Pengembalian belum lengkap. Pastikan Detil Permohonan dan nama perusahaan pada Data Permohonan sudah termuat.');
  const note=returnLatestNote(await returnReadHistory(),identity.authors);
- const result=await returnRpc('pengembalian',{id,tracking,company,province,permit,note:note.text,noteAuthor:note.author,noteTime:note.timestamp,clickedAt});
+ // Tanpa ID Izin OSS (Persetujuan): kolom id diisi nomor tracking, sama seperti Master data.
+ const result=await returnRpc('pengembalian',{id:(id&&!/^-+$/.test(id))?id:(kind?tracking:id),tracking,company,province,permit,note:note.text,noteAuthor:note.author,noteTime:note.timestamp,clickedAt});
  driveResult((result.already?'Sudah tercatat':'Proses Berhasil')+'\nPengembalian tercatat pada baris '+result.row+'.\nEvaluator: '+result.evaluator+'\nTanggal pengembalian: '+result.date+'\nCatatan tersimpan: '+note.author+' @ '+note.timestamp,'https://docs.google.com/spreadsheets/d/1ZW9nmnYmrNIPVGifHxo0CBPweDHgj9WRIwWpo-59owE/edit');
 }
 button('Pengembalian',420,()=>returnRun());
