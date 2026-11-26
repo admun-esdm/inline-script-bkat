@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Salin Data Teknis Pemohon
 // @namespace    inline-rekan
-// @version      1.3
+// @version      1.4
 // @description  Salin isian Data Teknis Permohonan dari pemohon ke formulir Data Teknis evaluator
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -11,6 +11,116 @@
 // @downloadURL  https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Salin_Data_Teknis_Pemohon.user.js
 // @homepageURL  https://github.com/admun-esdm/inline-script-bkat
 // ==/UserScript==
+// ===== AIRA: pop up pengganti alert/confirm/prompt bawaan browser (tampilan kuning ESDM + gerak halus) =====
+const AIRA_MODAL=(()=>{
+ const CSS=`:host{all:initial}*{box-sizing:border-box}
+ .back{position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;font:14px/1.5 "Segoe UI",Arial,sans-serif;color:#1d2939;animation:fade .2s ease-out}
+ .back.out{animation:fadeout .18s ease-in forwards}.back.out .card{animation:popout .18s ease-in forwards}
+ .card{width:min(var(--w,480px),100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:#fff;border-radius:18px;border-top:6px solid #f5e62a;box-shadow:0 24px 64px rgba(16,24,40,.35);overflow:hidden;animation:pop .26s cubic-bezier(.2,.9,.3,1.2)}
+ .head{display:flex;gap:14px;align-items:flex-start;padding:20px 22px 6px}
+ .ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:800 22px "Segoe UI",Arial,sans-serif;animation:bounce .5s cubic-bezier(.2,.9,.3,1.5) .05s both}
+ .t-ok .ic{background:#ecfdf3;color:#067647}.t-err .ic{background:#fef3f2;color:#b42318}.t-warn .ic{background:#fffaeb;color:#b54708}.t-ask .ic{background:#f5e62a;color:#111}.t-info .ic{background:#fffbd1;color:#6b6413}
+ .brand{font:800 11px "Segoe UI",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3}
+ h2{margin:1px 0 0;font:800 17px/1.3 "Segoe UI",Arial,sans-serif;color:#101828}
+ .lead{margin:3px 0 0;color:#475467;font-size:13.5px}
+ .body{padding:8px 22px 4px 80px;overflow:auto;animation:rise .3s cubic-bezier(.2,.9,.3,1) .06s both}
+ .p{margin:0 0 6px;white-space:pre-wrap;word-break:break-word}
+ .kv{display:grid;grid-template-columns:minmax(110px,max-content) 1fr;gap:0;border:1px solid #eee7a0;border-radius:12px;overflow:hidden;margin:4px 0 10px;background:#fff}
+ .kv div{padding:7px 11px;border-bottom:1px solid #f3eeb8;word-break:break-word}.kv div:nth-last-child(-n+2){border-bottom:0}
+ .kv .k{background:#fffbd1;color:#6b6413;font-weight:700;font-size:12.5px}
+ .kv .v{white-space:pre-wrap}
+ ul{margin:2px 0 10px;padding-left:18px}li{margin:2px 0}
+ .note{margin:6px 0 10px;padding:9px 12px;border-radius:10px;background:#fffaeb;border:1px solid #fedf89;color:#93370d;font-size:13px;white-space:pre-wrap}
+ .chg{border:1px solid #eee7a0;border-radius:12px;overflow:hidden;margin:4px 0 10px}
+ .chg div{padding:8px 11px;border-bottom:1px solid #f3eeb8}.chg div:last-child{border-bottom:0}
+ .chg b{display:block;font-size:12px;color:#6b6413;text-transform:uppercase;letter-spacing:.04em}
+ .chg s{color:#98a2b3}.chg .to{color:#067647;font-weight:700}
+ input.in{width:100%;margin:4px 0 8px;padding:9px 11px;border:1px solid #d0d5dd;border-radius:10px;font:600 14px "Segoe UI",Arial,sans-serif;color:#1d2939;transition:border-color .15s,box-shadow .15s}
+ input.in:focus{outline:0;border-color:#b8a90f;box-shadow:0 0 0 3px rgba(245,230,42,.5)}
+ .opts{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}
+ .opt{text-align:left;font-weight:600;display:flex;align-items:center;gap:10px}
+ .opt::before{content:'';width:16px;height:16px;border-radius:50%;border:2px solid #d0d5dd;flex:none;transition:all .15s}
+ .opt.on{border-color:#e3d64a;background:#fffbd1}.opt.on::before{border:5px solid #111}
+ button.pri:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+ a.link{display:inline-flex;align-items:center;gap:6px;margin:2px 0 8px;color:#175cd3;font-weight:700;text-decoration:none}a.link:hover{text-decoration:underline}
+ .foot{display:flex;gap:8px;justify-content:flex-end;padding:14px 22px 18px}
+ button{position:relative;overflow:hidden;border:1px solid #d0d5dd;border-radius:10px;padding:9px 18px;font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer;background:#fff;color:#1d2939;transition:transform .16s cubic-bezier(.2,.9,.3,1.3),box-shadow .18s,background .18s}
+ button.pri{background:#f5e62a;border-color:#e3d64a;color:#111;font-weight:800}
+ button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(17,17,17,.12)}button.pri:hover{background:#ffe94d}
+ button:active{transform:scale(.97);transition-duration:.08s}
+ button:focus{outline:0}button:focus-visible{outline:0;box-shadow:0 0 0 3px rgba(245,230,42,.65)}button.pri:focus-visible{box-shadow:0 0 0 3px rgba(17,17,17,.18)}
+ .rp{position:absolute;border-radius:50%;pointer-events:none;background:rgba(17,17,17,.12);transform:scale(0);animation:rp .55s ease-out forwards}
+ @keyframes rp{to{transform:scale(1);opacity:0}}
+ @keyframes fade{from{opacity:0}}@keyframes fadeout{to{opacity:0}}
+ @keyframes pop{from{transform:translateY(10px) scale(.96);opacity:0}}@keyframes popout{to{transform:translateY(6px) scale(.97);opacity:0}}
+ @keyframes rise{from{transform:translateY(8px);opacity:0}}
+ @keyframes bounce{from{transform:scale(.4) rotate(-12deg);opacity:0}}
+ @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
+ const ICON={ok:'✓',err:'!',warn:'!',ask:'?',info:'i'};
+ let chain=Promise.resolve();
+ const esc=s=>String(s??'');
+ // Ubah teks biasa menjadi tampilan rapi: "Label: nilai" -> tabel, "a menjadi b" (revisi) -> daftar perubahan, "•/-" -> daftar.
+ function render(body,text){
+  const blocks=esc(text).replace(/\r/g,'').split(/\n{2,}/);
+  for(const block of blocks){
+   const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)continue;
+   if(lines.every(l=>/^.{1,60}?: .+ menjadi .+$/.test(l))){const c=document.createElement('div');c.className='chg';
+    for(const l of lines){const m=l.match(/^(.{1,60}?): (.+) menjadi (.+)$/);const d=document.createElement('div');const b=document.createElement('b');b.textContent=m[1];const s=document.createElement('s');s.textContent=m[2];const t=document.createElement('span');t.className='to';t.textContent=' → '+m[3];d.append(b,s,t);c.append(d);}
+    body.append(c);continue;}
+   let kv=null,ul=null;
+   for(const l of lines){
+    const m=l.match(/^([A-Za-zÀ-ÿ0-9 ./()'-]{2,34}): (.+)$/);
+    if(/^[•\-–]\s/.test(l)){kv=null;if(!ul){ul=document.createElement('ul');body.append(ul);}const li=document.createElement('li');li.textContent=l.replace(/^[•\-–]\s*/,'');ul.append(li);continue;}
+    ul=null;
+    if(m&&!/^https?$/i.test(m[1])){if(!kv){kv=document.createElement('div');kv.className='kv';body.append(kv);}
+     for(const part of l.split(' | ')){const mm=part.match(/^([^:]{2,34}): (.*)$/);const k=document.createElement('div');k.className='k';const v=document.createElement('div');v.className='v';if(mm){k.textContent=mm[1];v.textContent=mm[2];}else{k.textContent='';v.textContent=part;}kv.append(k,v);}
+     continue;}
+    kv=null;const p=document.createElement('p');p.className=/^(catatan|perhatian|data teknis dan|metode\/pompa)/i.test(l)?'note':'p';p.textContent=l.replace(/ \| /g,' · ');body.append(p);
+   }
+  }
+ }
+ function open(o){
+  const run=()=>new Promise(resolve=>{
+   const host=document.createElement('div');host.setAttribute('data-aira-modal','');const root=host.attachShadow({mode:'open'});
+   const tone=o.tone||'info';
+   root.innerHTML=`<style>${CSS}</style><div class="back"><div class="card t-${tone}" role="${o.kind==='alert'?'alertdialog':'dialog'}" aria-modal="true"><div class="head"><div class="ic" aria-hidden="true">${ICON[tone]||'i'}</div><div><div class="brand">AIRA${o.source?' · '+o.source.replace(/[<>&]/g,''):''}</div><h2></h2><div class="lead"></div></div></div><div class="body"></div><div class="foot"></div></div></div>`;
+   const q=s=>root.querySelector(s);if(o.width)q('.card').style.setProperty('--w',o.width+'px');
+   q('h2').textContent=o.title||'';if(o.lead)q('.lead').textContent=o.lead;else q('.lead').remove();
+   const body=q('.body');render(body,o.message||'');
+   if(o.link){const a=document.createElement('a');a.className='link';a.href=o.link.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=o.link.text+' ↗';body.append(a);}
+   let picked=null,okRef=null;
+   if(o.kind==='choose'){const box=document.createElement('div');box.className='opts';box.setAttribute('role','radiogroup');for(const opt of o.options){const v=typeof opt==='object'?opt.value:opt,label=typeof opt==='object'?opt.label:opt;const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=label;b.setAttribute('role','radio');b.onclick=()=>{picked=v;box.querySelectorAll('.opt').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-checked',String(x===b));});if(okRef)okRef.disabled=false;};box.append(b);}body.append(box);}
+   let input=null;if(o.kind==='prompt'){input=document.createElement('input');input.className='in';input.value=o.value||'';input.spellcheck=false;body.append(input);}
+   if(!body.childNodes.length)body.remove();
+   const foot=q('.foot');let done=false;
+   const finish=v=>{if(done)return;done=true;document.removeEventListener('keydown',key,true);q('.back').classList.add('out');setTimeout(()=>{host.remove();resolve(v);},180);};
+   const mk=(text,pri,val)=>{const b=document.createElement('button');b.type='button';b.textContent=text;if(pri)b.className='pri';b.onclick=()=>finish(typeof val==='function'?val():val);foot.append(b);return b;};
+   let okBtn;
+   if(o.kind==='alert')okBtn=mk(o.ok||'OK',true,true);
+   else if(o.kind==='choose'){mk(o.cancel||'Batal',false,null);okBtn=mk(o.ok||'Pilih',true,()=>picked);okBtn.disabled=true;okRef=okBtn;}
+   else{mk(o.cancel||'Batal',false,o.kind==='prompt'?null:false);okBtn=mk(o.ok||'Lanjut',true,o.kind==='prompt'?()=>input.value:true);}
+   const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(o.kind==='alert'?true:(o.kind==='prompt'||o.kind==='choose'?null:false));}
+    else if(e.key==='Enter'&&!(e.target&&e.target.tagName==='TEXTAREA')&&!okBtn.disabled){e.preventDefault();e.stopPropagation();okBtn.click();}};
+   document.addEventListener('keydown',key,true);
+   root.addEventListener('pointerdown',e=>{const b=e.composedPath().find(n=>n.tagName==='BUTTON');if(!b)return;const r=b.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2,s=document.createElement('span');s.className='rp';s.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-r.left-size/2)+'px;top:'+(e.clientY-r.top-size/2)+'px';b.append(s);setTimeout(()=>s.remove(),600);});
+   (document.body||document.documentElement).append(host);
+   setTimeout(()=>{(input||(o.kind==='choose'?root.querySelector('.opt'):okBtn)).focus();if(input)input.select();},30);
+  });
+  const p=chain.then(run,run);chain=p.catch(()=>{});return p;
+ }
+ const toneOf=m=>/^(proses berhasil|berhasil|sudah tercatat|data teknis disalin|pengaturan inline tersimpan)|berhasil disimpan|tersimpan\.?$/i.test(String(m).trim())?'ok':'info';
+ return {
+  alert:(message,o={})=>open({kind:'alert',message,title:o.title||(toneOf(message)==='ok'?'Berhasil':'Informasi'),tone:o.tone||toneOf(message),...o,message}),
+  error:(message,o={})=>open({kind:'alert',title:'Belum berhasil',tone:'err',...o,message}),
+  confirm:(message,o={})=>open({kind:'confirm',title:'Konfirmasi',tone:'ask',...o,message}),
+  prompt:(message,value,o={})=>open({kind:'prompt',title:'Masukkan pilihan',tone:'ask',...o,message,value}),
+  choose:(message,options,o={})=>open({kind:'choose',title:'Pilih salah satu',tone:'ask',...o,message,options}),
+  // Pesan lama berformat "Judul\nisi…": baris pertama menjadi judul.
+  ask:(text,o={})=>{const [first,...rest]=String(text).split('\n');return open({kind:'confirm',tone:'ask',ok:'Kirim',...o,title:first,message:rest.join('\n')});},
+  done:(text,o={})=>{const [first,...rest]=String(text).split('\n');return open({kind:'alert',tone:toneOf(first),...o,title:first.replace(/\s+—\s+/,' — '),message:rest.join('\n')});}
+ };
+})();
+
 (() => {
 'use strict';
 const KIND_REQ='INLINE_SALIN_TEKNIS',KIND_RES='INLINE_SALIN_TEKNIS_RESULT';
@@ -149,15 +259,15 @@ button.onclick=async()=>{
  button.disabled=true;button.textContent='Menyalin…';
  try{
   const p=await ask('preview');
-  if(!p.fill&&!p.conflicts.length){alert(p.same?'Data teknis evaluator sudah sama dengan data pemohon. Tidak ada yang perlu disalin.':'Tidak ada isian pemohon yang cocok untuk disalin.');return;}
+  if(!p.fill&&!p.conflicts.length){await AIRA_MODAL.alert(p.same?'Data teknis evaluator sudah sama dengan data pemohon. Tidak ada yang perlu disalin.':'Tidak ada isian pemohon yang cocok untuk disalin.',{title:p.same?'Sudah sama':'Tidak ada yang disalin',tone:'info',source:'Salin Data Teknis Pemohon'});return;}
   let overwrite=false;
   if(p.conflicts.length){
-   const list=p.conflicts.slice(0,12).map(c=>'• '+c.label+': "'+c.current+'" → "'+c.value+'"').join('\n')+(p.conflicts.length>12?'\n…dan '+(p.conflicts.length-12)+' lainnya':'');
-   overwrite=confirm(p.conflicts.length+' isian evaluator sudah terisi dan berbeda dari data pemohon:\n\n'+list+'\n\nOK = timpa dengan data pemohon\nBatal = biarkan isian evaluator, salin yang masih kosong saja');
+   const list=p.conflicts.slice(0,12).map(c=>c.label+': '+c.current+' menjadi '+c.value).join('\n')+(p.conflicts.length>12?'\n\n…dan '+(p.conflicts.length-12)+' lainnya':'');
+   overwrite=await AIRA_MODAL.confirm(list,{title:p.conflicts.length+' isian evaluator sudah terisi dan berbeda',lead:'Isian evaluator (dicoret) dibandingkan data pemohon (hijau).',tone:'warn',ok:'Timpa dengan data pemohon',cancel:'Salin yang kosong saja',source:'Salin Data Teknis Pemohon',width:560});
   }
   const r=await ask('apply',overwrite);
-  alert('Data teknis disalin: '+r.filled.length+' isian (ditandai kuning).'+(r.skipped?'\nDibiarkan (sudah terisi): '+r.skipped+'.':'')+(r.failed.length?'\nGagal (pilihan tidak cocok, isi manual): '+r.failed.join('; ')+'.':'')+'\n\nPeriksa kembali isian sebelum menyimpan; simpan seperti biasa di formulir evaluator.');
- }catch(e){alert('Salin data teknis gagal: '+e.message);}
+  await AIRA_MODAL.alert('Disalin: '+r.filled.length+' isian (ditandai kuning)'+(r.skipped?'\nDibiarkan: '+r.skipped+' isian (sudah terisi)':'')+(r.failed.length?'\nPerlu diisi manual: '+r.failed.join('; '):'')+'\n\nPeriksa kembali isian sebelum menyimpan; simpan seperti biasa di formulir evaluator.',{title:'Data teknis berhasil disalin',tone:'ok',source:'Salin Data Teknis Pemohon'});
+ }catch(e){await AIRA_MODAL.error(e.message,{title:'Salin data teknis gagal',source:'Salin Data Teknis Pemohon'});}
  finally{button.disabled=false;button.textContent='Salin Data Teknis Pemohon';}
 };
 })();

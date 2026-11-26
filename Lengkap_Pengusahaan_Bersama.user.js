@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.9
+// @version      3.10.0
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
 // @match        https://script.google.com/macros/s/*
+// @match        https://script.google.com/macros/u/*
 // @match        https://*.googleusercontent.com/*
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -16,10 +17,121 @@
 // @connect      formgen-perizinan.esdm.go.id
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
+// @connect      www.googleapis.com
 // @updateURL    https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lengkap_Pengusahaan_Bersama.user.js
 // @downloadURL  https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lengkap_Pengusahaan_Bersama.user.js
 // @homepageURL  https://github.com/admun-esdm/inline-script-bkat
 // ==/UserScript==
+// ===== AIRA: pop up pengganti alert/confirm/prompt bawaan browser (tampilan kuning ESDM + gerak halus) =====
+const AIRA_MODAL=(()=>{
+ const CSS=`:host{all:initial}*{box-sizing:border-box}
+ .back{position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;font:14px/1.5 "Segoe UI",Arial,sans-serif;color:#1d2939;animation:fade .2s ease-out}
+ .back.out{animation:fadeout .18s ease-in forwards}.back.out .card{animation:popout .18s ease-in forwards}
+ .card{width:min(var(--w,480px),100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:#fff;border-radius:18px;border-top:6px solid #f5e62a;box-shadow:0 24px 64px rgba(16,24,40,.35);overflow:hidden;animation:pop .26s cubic-bezier(.2,.9,.3,1.2)}
+ .head{display:flex;gap:14px;align-items:flex-start;padding:20px 22px 6px}
+ .ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:800 22px "Segoe UI",Arial,sans-serif;animation:bounce .5s cubic-bezier(.2,.9,.3,1.5) .05s both}
+ .t-ok .ic{background:#ecfdf3;color:#067647}.t-err .ic{background:#fef3f2;color:#b42318}.t-warn .ic{background:#fffaeb;color:#b54708}.t-ask .ic{background:#f5e62a;color:#111}.t-info .ic{background:#fffbd1;color:#6b6413}
+ .brand{font:800 11px "Segoe UI",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3}
+ h2{margin:1px 0 0;font:800 17px/1.3 "Segoe UI",Arial,sans-serif;color:#101828}
+ .lead{margin:3px 0 0;color:#475467;font-size:13.5px}
+ .body{padding:8px 22px 4px 80px;overflow:auto;animation:rise .3s cubic-bezier(.2,.9,.3,1) .06s both}
+ .p{margin:0 0 6px;white-space:pre-wrap;word-break:break-word}
+ .kv{display:grid;grid-template-columns:minmax(110px,max-content) 1fr;gap:0;border:1px solid #eee7a0;border-radius:12px;overflow:hidden;margin:4px 0 10px;background:#fff}
+ .kv div{padding:7px 11px;border-bottom:1px solid #f3eeb8;word-break:break-word}.kv div:nth-last-child(-n+2){border-bottom:0}
+ .kv .k{background:#fffbd1;color:#6b6413;font-weight:700;font-size:12.5px}
+ .kv .v{white-space:pre-wrap}
+ ul{margin:2px 0 10px;padding-left:18px}li{margin:2px 0}
+ .note{margin:6px 0 10px;padding:9px 12px;border-radius:10px;background:#fffaeb;border:1px solid #fedf89;color:#93370d;font-size:13px;white-space:pre-wrap}
+ .chg{border:1px solid #eee7a0;border-radius:12px;overflow:hidden;margin:4px 0 10px}
+ .chg div{padding:8px 11px;border-bottom:1px solid #f3eeb8}.chg div:last-child{border-bottom:0}
+ .chg b{display:block;font-size:12px;color:#6b6413;text-transform:uppercase;letter-spacing:.04em}
+ .chg s{color:#98a2b3}.chg .to{color:#067647;font-weight:700}
+ input.in{width:100%;margin:4px 0 8px;padding:9px 11px;border:1px solid #d0d5dd;border-radius:10px;font:600 14px "Segoe UI",Arial,sans-serif;color:#1d2939;transition:border-color .15s,box-shadow .15s}
+ input.in:focus{outline:0;border-color:#b8a90f;box-shadow:0 0 0 3px rgba(245,230,42,.5)}
+ .opts{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}
+ .opt{text-align:left;font-weight:600;display:flex;align-items:center;gap:10px}
+ .opt::before{content:'';width:16px;height:16px;border-radius:50%;border:2px solid #d0d5dd;flex:none;transition:all .15s}
+ .opt.on{border-color:#e3d64a;background:#fffbd1}.opt.on::before{border:5px solid #111}
+ button.pri:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+ a.link{display:inline-flex;align-items:center;gap:6px;margin:2px 0 8px;color:#175cd3;font-weight:700;text-decoration:none}a.link:hover{text-decoration:underline}
+ .foot{display:flex;gap:8px;justify-content:flex-end;padding:14px 22px 18px}
+ button{position:relative;overflow:hidden;border:1px solid #d0d5dd;border-radius:10px;padding:9px 18px;font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer;background:#fff;color:#1d2939;transition:transform .16s cubic-bezier(.2,.9,.3,1.3),box-shadow .18s,background .18s}
+ button.pri{background:#f5e62a;border-color:#e3d64a;color:#111;font-weight:800}
+ button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(17,17,17,.12)}button.pri:hover{background:#ffe94d}
+ button:active{transform:scale(.97);transition-duration:.08s}
+ button:focus{outline:0}button:focus-visible{outline:0;box-shadow:0 0 0 3px rgba(245,230,42,.65)}button.pri:focus-visible{box-shadow:0 0 0 3px rgba(17,17,17,.18)}
+ .rp{position:absolute;border-radius:50%;pointer-events:none;background:rgba(17,17,17,.12);transform:scale(0);animation:rp .55s ease-out forwards}
+ @keyframes rp{to{transform:scale(1);opacity:0}}
+ @keyframes fade{from{opacity:0}}@keyframes fadeout{to{opacity:0}}
+ @keyframes pop{from{transform:translateY(10px) scale(.96);opacity:0}}@keyframes popout{to{transform:translateY(6px) scale(.97);opacity:0}}
+ @keyframes rise{from{transform:translateY(8px);opacity:0}}
+ @keyframes bounce{from{transform:scale(.4) rotate(-12deg);opacity:0}}
+ @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
+ const ICON={ok:'✓',err:'!',warn:'!',ask:'?',info:'i'};
+ let chain=Promise.resolve();
+ const esc=s=>String(s??'');
+ // Ubah teks biasa menjadi tampilan rapi: "Label: nilai" -> tabel, "a menjadi b" (revisi) -> daftar perubahan, "•/-" -> daftar.
+ function render(body,text){
+  const blocks=esc(text).replace(/\r/g,'').split(/\n{2,}/);
+  for(const block of blocks){
+   const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)continue;
+   if(lines.every(l=>/^.{1,60}?: .+ menjadi .+$/.test(l))){const c=document.createElement('div');c.className='chg';
+    for(const l of lines){const m=l.match(/^(.{1,60}?): (.+) menjadi (.+)$/);const d=document.createElement('div');const b=document.createElement('b');b.textContent=m[1];const s=document.createElement('s');s.textContent=m[2];const t=document.createElement('span');t.className='to';t.textContent=' → '+m[3];d.append(b,s,t);c.append(d);}
+    body.append(c);continue;}
+   let kv=null,ul=null;
+   for(const l of lines){
+    const m=l.match(/^([A-Za-zÀ-ÿ0-9 ./()'-]{2,34}): (.+)$/);
+    if(/^[•\-–]\s/.test(l)){kv=null;if(!ul){ul=document.createElement('ul');body.append(ul);}const li=document.createElement('li');li.textContent=l.replace(/^[•\-–]\s*/,'');ul.append(li);continue;}
+    ul=null;
+    if(m&&!/^https?$/i.test(m[1])){if(!kv){kv=document.createElement('div');kv.className='kv';body.append(kv);}
+     for(const part of l.split(' | ')){const mm=part.match(/^([^:]{2,34}): (.*)$/);const k=document.createElement('div');k.className='k';const v=document.createElement('div');v.className='v';if(mm){k.textContent=mm[1];v.textContent=mm[2];}else{k.textContent='';v.textContent=part;}kv.append(k,v);}
+     continue;}
+    kv=null;const p=document.createElement('p');p.className=/^(catatan|perhatian|data teknis dan|metode\/pompa)/i.test(l)?'note':'p';p.textContent=l.replace(/ \| /g,' · ');body.append(p);
+   }
+  }
+ }
+ function open(o){
+  const run=()=>new Promise(resolve=>{
+   const host=document.createElement('div');host.setAttribute('data-aira-modal','');const root=host.attachShadow({mode:'open'});
+   const tone=o.tone||'info';
+   root.innerHTML=`<style>${CSS}</style><div class="back"><div class="card t-${tone}" role="${o.kind==='alert'?'alertdialog':'dialog'}" aria-modal="true"><div class="head"><div class="ic" aria-hidden="true">${ICON[tone]||'i'}</div><div><div class="brand">AIRA${o.source?' · '+o.source.replace(/[<>&]/g,''):''}</div><h2></h2><div class="lead"></div></div></div><div class="body"></div><div class="foot"></div></div></div>`;
+   const q=s=>root.querySelector(s);if(o.width)q('.card').style.setProperty('--w',o.width+'px');
+   q('h2').textContent=o.title||'';if(o.lead)q('.lead').textContent=o.lead;else q('.lead').remove();
+   const body=q('.body');render(body,o.message||'');
+   if(o.link){const a=document.createElement('a');a.className='link';a.href=o.link.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=o.link.text+' ↗';body.append(a);}
+   let picked=null,okRef=null;
+   if(o.kind==='choose'){const box=document.createElement('div');box.className='opts';box.setAttribute('role','radiogroup');for(const opt of o.options){const v=typeof opt==='object'?opt.value:opt,label=typeof opt==='object'?opt.label:opt;const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=label;b.setAttribute('role','radio');b.onclick=()=>{picked=v;box.querySelectorAll('.opt').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-checked',String(x===b));});if(okRef)okRef.disabled=false;};box.append(b);}body.append(box);}
+   let input=null;if(o.kind==='prompt'){input=document.createElement('input');input.className='in';input.value=o.value||'';input.spellcheck=false;body.append(input);}
+   if(!body.childNodes.length)body.remove();
+   const foot=q('.foot');let done=false;
+   const finish=v=>{if(done)return;done=true;document.removeEventListener('keydown',key,true);q('.back').classList.add('out');setTimeout(()=>{host.remove();resolve(v);},180);};
+   const mk=(text,pri,val)=>{const b=document.createElement('button');b.type='button';b.textContent=text;if(pri)b.className='pri';b.onclick=()=>finish(typeof val==='function'?val():val);foot.append(b);return b;};
+   let okBtn;
+   if(o.kind==='alert')okBtn=mk(o.ok||'OK',true,true);
+   else if(o.kind==='choose'){mk(o.cancel||'Batal',false,null);okBtn=mk(o.ok||'Pilih',true,()=>picked);okBtn.disabled=true;okRef=okBtn;}
+   else{mk(o.cancel||'Batal',false,o.kind==='prompt'?null:false);okBtn=mk(o.ok||'Lanjut',true,o.kind==='prompt'?()=>input.value:true);}
+   const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(o.kind==='alert'?true:(o.kind==='prompt'||o.kind==='choose'?null:false));}
+    else if(e.key==='Enter'&&!(e.target&&e.target.tagName==='TEXTAREA')&&!okBtn.disabled){e.preventDefault();e.stopPropagation();okBtn.click();}};
+   document.addEventListener('keydown',key,true);
+   root.addEventListener('pointerdown',e=>{const b=e.composedPath().find(n=>n.tagName==='BUTTON');if(!b)return;const r=b.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2,s=document.createElement('span');s.className='rp';s.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-r.left-size/2)+'px;top:'+(e.clientY-r.top-size/2)+'px';b.append(s);setTimeout(()=>s.remove(),600);});
+   (document.body||document.documentElement).append(host);
+   setTimeout(()=>{(input||(o.kind==='choose'?root.querySelector('.opt'):okBtn)).focus();if(input)input.select();},30);
+  });
+  const p=chain.then(run,run);chain=p.catch(()=>{});return p;
+ }
+ const toneOf=m=>/^(proses berhasil|berhasil|sudah tercatat|data teknis disalin|pengaturan inline tersimpan)|berhasil disimpan|tersimpan\.?$/i.test(String(m).trim())?'ok':'info';
+ return {
+  alert:(message,o={})=>open({kind:'alert',message,title:o.title||(toneOf(message)==='ok'?'Berhasil':'Informasi'),tone:o.tone||toneOf(message),...o,message}),
+  error:(message,o={})=>open({kind:'alert',title:'Belum berhasil',tone:'err',...o,message}),
+  confirm:(message,o={})=>open({kind:'confirm',title:'Konfirmasi',tone:'ask',...o,message}),
+  prompt:(message,value,o={})=>open({kind:'prompt',title:'Masukkan pilihan',tone:'ask',...o,message,value}),
+  choose:(message,options,o={})=>open({kind:'choose',title:'Pilih salah satu',tone:'ask',...o,message,options}),
+  // Pesan lama berformat "Judul\nisi…": baris pertama menjadi judul.
+  ask:(text,o={})=>{const [first,...rest]=String(text).split('\n');return open({kind:'confirm',tone:'ask',ok:'Kirim',...o,title:first,message:rest.join('\n')});},
+  done:(text,o={})=>{const [first,...rest]=String(text).split('\n');return open({kind:'alert',tone:toneOf(first),...o,title:first.replace(/\s+—\s+/,' — '),message:rest.join('\n')});}
+ };
+})();
+
 (() => {
 'use strict';
 // R20: URL dan token tidak lagi ditulis di kode, tetapi disimpan di Tampermonkey pada PC masing-masing
@@ -83,8 +195,8 @@ function lockDialogStyle(root){
 }
 const driveJobKey=id=>'inline-drive-user:'+id;
 async function bootDriveAccountBridge(){
- const marker='inline-drive-account-r4';let root=null;
- for(let i=0;i<60&&!root;i++){root=document.querySelector('#inline-evaluator-drive-root[data-app="'+marker+'"]');if(!root)await new Promise(r=>setTimeout(r,500));}
+ let root=null;
+ for(let i=0;i<60&&!root;i++){root=document.querySelector('#inline-evaluator-drive-root[data-app="inline-drive-account-r4"],#inline-evaluator-drive-root[data-app="inline-drive-auth-r5"]');if(!root)await new Promise(r=>setTimeout(r,500));}
  if(!root)return;
  const ancestors=Array.from(location.ancestorOrigins||[]);
  if(ancestors.some(origin=>{try{const host=new URL(origin).hostname;return host!=='ngantor.esdm.go.id'&&host!=='script.google.com'&&!/(?:^|\.)googleusercontent\.com$/.test(host);}catch{return true;}}))return;
@@ -93,7 +205,9 @@ async function bootDriveAccountBridge(){
   let q;try{q=JSON.parse(e.detail);}catch{return;}if(q.job!==job)return;
   let response;try{
    const meta=await GM_getValue(driveJobKey(job));if(!meta||Date.now()-meta.createdAt>30*60*1000)throw Error('Sesi lampiran berakhir/tidak ditemukan pada profil browser ini. Kembali ke INLINE dan periksa folder sebelum memulai ulang.');
-   if(q.kind==='manifest'){const seen={...meta,bridgeSeenAt:Date.now()};await GM_setValue(driveJobKey(job),seen);response=seen;}
+   if(q.kind==='auth'){const a=q.data||{};if(meta.kind!=='auth'||typeof a.token!=='string'||!a.token||typeof a.email!=='string'||!a.email||!a.folders||typeof a.folders!=='object')throw Error('Data akun tidak valid.');
+    await GM_setValue(driveJobKey(job),{...meta,auth:{email:a.email.toLowerCase(),token:a.token,exp:Date.now()+50*60*1000,folders:a.folders}});response={ok:true};}
+   else if(q.kind==='manifest'){const seen={...meta,bridgeSeenAt:Date.now()};await GM_setValue(driveJobKey(job),seen);response=seen;}
    else if(q.kind==='file'){if(meta.status!=='uploading'||!Number.isInteger(q.index)||q.index<0||q.index>=meta.names.length)throw Error('Permintaan PDF tidak valid.');response={base64:await GM_getValue(driveJobKey(job)+':'+q.index)};if(!response.base64)throw Error('PDF tidak tersedia.');}
    else if(q.kind==='status'){const allowed=['uploading','success','error'];if(!allowed.includes(q.data?.status))throw Error('Status tidak valid.');const next={...meta,status:q.data.status,account:String(q.data.account||''),written:Number(q.data.written)||0,folderUrl:String(q.data.folderUrl||''),folderName:String(q.data.folderName||''),message:String(q.data.message||'')};await GM_setValue(driveJobKey(job),next);if(next.status==='success')for(let i=0;i<meta.names.length;i++)await GM_deleteValue(driveJobKey(job)+':'+i);response={ok:true};}
    else throw Error('Permintaan jembatan tidak dikenali.');
@@ -207,11 +321,12 @@ function openSettings(first){
   if(!token||/\s/.test(token)||/^ISI_/i.test(token))return fail('Isi TOKEN evaluator.');
   if(drive&&!EXEC_URL.test(drive))return fail('URL Drive harus berbentuk https://script.google.com/macros/s/.../exec (atau kosongkan).');
   if(!shared)GM_setValue(CFG.url,url);GM_setValue(CFG.token,token);if(!sharedDrive)GM_setValue(CFG.drive,drive);
-  loadConfig();close();alert('Pengaturan INLINE tersimpan.');
+  loadConfig();close();AIRA_MODAL.alert('Token tersimpan di Tampermonkey pada PC ini dan tidak hilang saat script diperbarui.',{title:'Pengaturan INLINE tersimpan',tone:'ok',source:'Pengaturan'});
  };
  lockDialogStyle(d);document.body.append(d);d.showModal();
 }
 try{GM_registerMenuCommand('Pengaturan INLINE (URL & token)',()=>openSettings(false));}catch{}
+try{GM_registerMenuCommand('Ganti akun Google Drive (AIRA)',async()=>{const e=await GM_getValue('aira_drive_email','');await GM_deleteValue('aira_drive_email');await GM_deleteValue('aira_drive_index');await GM_deleteValue('aira_drive_auth');AIRA_MODAL.alert('Akun Drive '+(e||'')+' dilepas. Saat klik Simpan Lampiran ke Drive berikutnya, Anda diminta memilih akun lagi.',{title:'Akun Google Drive direset',tone:'ok',source:'Simpan Lampiran ke Drive'});});}catch{}
 if(/^ISI_/.test(TOKEN)||/^ISI_/.test(WEB_APP_URL))setTimeout(()=>openSettings(true),1200);
 function frame(kind='OSS_LENGKAP'){
  const iframe=document.querySelector('#fgenFormIframe');
@@ -343,7 +458,7 @@ async function writeFolder(destination,folder,files,button){
    written++;
   }
  }catch(e){throw Error('Penyimpanan belum selesai: '+written+'/'+files.length+' PDF tersimpan di folder '+name+'. '+e.message);}
- alert(files.length+' PDF berhasil disimpan langsung di folder '+name+'.');
+ await AIRA_MODAL.alert('Folder: '+name+'\nJumlah: '+files.length+' PDF',{title:'Lampiran berhasil disimpan',tone:'ok',source:'Download Lampiran'});
 }
 // Nama lampiran ringkas; nomor urut tetap ditambahkan oleh pengunduh.
 function attachmentTitle(raw,dewatering=false){
@@ -447,7 +562,7 @@ async function attachments(button,drive=false,job=null){
  const base=attachmentDownloadBase([...document.scripts].map(s=>s.textContent),location.href);
  const files=[];let count=0;
  for(const link of links){
-  button.textContent='Download '+(++count)+'/'+links.length;
+  button.textContent='Download '+(++count)+'/'+links.length;job?.panel?.reading(count,links.length);
   const docId=link.getAttribute('data-id');if(!/^\d+$/.test(docId||''))throw Error('ID lampiran tidak valid.');
   const r=await fetch(base+'/'+docId,{credentials:'same-origin'});if(!r.ok)throw Error('Lampiran '+count+' gagal: HTTP '+r.status);
   const bytes=new Uint8Array(await r.arrayBuffer());
@@ -458,7 +573,7 @@ async function attachments(button,drive=false,job=null){
   const fileTitle=attachmentTitle(title,/dewatering/i.test(detail('Jenis Izin')));
   files.push({name:folder+'/'+String(count).padStart(2,'0')+' - '+safe(fileTitle)+'.pdf',bytes});
  }
- if(drive)return await writeDrive(province,folder,files,button,job);
+ if(drive)return job?.panel?await uploadDriveAkun(province,folder,files,button,job.panel):await writeDrive(province,folder,files,button,job);
  else await writeFolder(destination,folder,files,button);
 }
 
@@ -470,24 +585,43 @@ function driveProvince(value){
 }
 function driveBase64(bytes){let text='';for(let i=0;i<bytes.length;i+=32768)text+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(text);}
 function driveResult(message,url){
- const dialog=airaDialog();dialog.style.cssText='max-width:600px;width:80vw;padding:24px;border:0;border-radius:12px;font:14px/1.5 Arial;color:#24344a';
- const text=document.createElement('p');text.style.whiteSpace='pre-wrap';text.textContent=message;dialog.append(text);
- if(url){const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Buka folder di Google Drive';dialog.append(a);}
- const close=document.createElement('button');close.textContent='Tutup';close.style.cssText='display:block;margin-top:18px;padding:8px 20px';close.onclick=()=>{dialog.close();dialog.remove();};dialog.append(close);dialog.addEventListener('cancel',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
+ // R20: hasil Simpan Lampiran ke Drive dan Pengembalian memakai pop up AIRA.
+ const [first,...rest]=String(message).split('\n'),peng=/pengembalian/i.test(message);
+ const tone=/belum selesai|gagal/i.test(first)?'warn':/berhasil|tercatat|tersimpan/i.test(first)?'ok':'info';
+ return AIRA_MODAL.alert(rest.join('\n'),{title:first,tone,source:peng?'Pengembalian':'Simpan Lampiran ke Drive',link:url?{url,text:peng?'Buka rekap pengembalian':'Buka folder di Google Drive'}:null,width:520});
 }
 
 const driveInlineDialogs=new Map();
 function openInlineDrivePopup(job){
- const dialog=airaDialog();dialog.style.cssText='width:min(840px,94vw);height:min(760px,90vh);padding:18px;border:0;border-radius:12px;box-sizing:border-box;color:#24344a;background:white;font:14px/1.5 Arial';
- const heading=document.createElement('h2');heading.textContent='Simpan Lampiran ke Google Drive';heading.style.margin='0 0 8px';dialog.append(heading);
- const status=document.createElement('p');status.textContent='Menyiapkan PDF dan memeriksa akun Google...';dialog.append(status);
- const auth=document.createElement('div');auth.hidden=true;
- const explanation=document.createElement('p');explanation.textContent='Halaman Google belum merespons. Jika belum login atau belum memberi izin, gunakan Login Google, selesaikan izin, lalu tutup jendela login. Jika sudah login, klik Muat ulang popup. Browser harus mengizinkan sesi Google dalam popup ini.';auth.append(explanation);
- const login=document.createElement('button');login.textContent='Login Google';login.style.cssText='padding:8px 14px;margin-right:8px';auth.append(login);
- const reload=document.createElement('button');reload.textContent='Muat ulang popup';reload.style.cssText='padding:8px 14px';auth.append(reload);dialog.append(auth);
- const frame=document.createElement('iframe');frame.title='Upload lampiran dengan akun evaluator';frame.style.cssText='display:block;width:100%;height:calc(100% - 140px);min-height:260px;border:1px solid #d2dce6;border-radius:8px';
+ // R20: tampilan AIRA — judul, status dengan indikator berputar, bilah progres, kotak login (bila perlu), lalu halaman upload.
+ const dialog=airaDialog();dialog.style.cssText='width:min(840px,94vw);height:min(780px,92vh);padding:0;border:0;border-radius:12px;box-sizing:border-box;color:#24344a;background:#fff;font:14px/1.5 Arial;display:flex;flex-direction:column;overflow:hidden';
+ dialog.innerHTML=`<style>
+  .aira-dv-spin{width:16px;height:16px;border-radius:50%;border:2.5px solid #eee7a0;border-top-color:#111;animation:aira-dv-rot .8s linear infinite;flex:none}
+  .aira-dv-done .aira-dv-spin{border-color:#067647;animation:none;background:#067647}
+  .aira-dv-err .aira-dv-spin{border-color:#b42318;animation:none;background:#b42318}
+  @keyframes aira-dv-rot{to{transform:rotate(360deg)}}
+  .aira-dv-bar{height:6px;border-radius:99px;background:#f3eeb8;overflow:hidden;margin-top:8px}.aira-dv-bar>i{display:block;height:100%;width:0;background:#111;border-radius:99px;transition:width .4s cubic-bezier(.2,.9,.3,1)}
+  .aira-dv-ind .aira-dv-bar>i{width:35%;animation:aira-dv-slide 1.2s ease-in-out infinite}@keyframes aira-dv-slide{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+ </style>
+ <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:#f5e62a;border-bottom:1px solid rgba(17,17,17,.12)">
+  <div style="width:38px;height:38px;border-radius:10px;background:#111;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="22" height="22"><g fill="#f5e62a"><path d="M8 3h8l7.5 13h-7.7z"/><path d="M8 3l4 6.6-7.7 12.9-3.8-6.5z"/><path d="M8.2 16h15.3l-3.8 6.5H4.3z"/></g></svg></div>
+  <div style="flex:1"><div style="font-size:11px;font-weight:bold;letter-spacing:.08em;color:#6b6413">AIRA · SIMPAN LAMPIRAN KE DRIVE</div><h2 style="margin:0;font-size:17px">Menyimpan lampiran ke Google Drive</h2></div>
+  <button type="button" data-a="close">Tutup</button>
+ </div>
+ <div data-a="statusbox" class="aira-dv-ind" style="padding:14px 20px;border-bottom:1px solid #f3eeb8;background:#fffdf0">
+  <div style="display:flex;align-items:center;gap:10px"><span class="aira-dv-spin"></span><span data-a="status" style="font-weight:bold"></span></div>
+  <div class="aira-dv-bar"><i></i></div>
+ </div>
+ <div data-a="auth" hidden style="margin:14px 20px 0;padding:12px 14px;border:1px solid #fedf89;background:#fffaeb;border-radius:12px;color:#93370d">
+  <div style="font-weight:bold;margin-bottom:4px">Perlu login Google?</div>
+  <div style="font-size:13px;margin-bottom:10px">Halaman Google belum merespons. Bila belum login atau belum memberi izin, klik <b>Login Google</b>, selesaikan izin, lalu tutup jendela login. Bila sudah login, klik <b>Muat ulang</b>. Pastikan browser mengizinkan sesi Google di pop up ini.</div>
+  <button type="button" data-a="login" class="aira-primary">Login Google</button> <button type="button" data-a="reload">Muat ulang</button>
+ </div>`;
+ const q=x=>dialog.querySelector(x);
+ const status=q('[data-a=status]');status.textContent='Menyiapkan PDF dan memeriksa akun Google…';
+ const auth=q('[data-a=auth]'),login=q('[data-a=login]'),reload=q('[data-a=reload]'),close=q('[data-a=close]'),statusBox=q('[data-a=statusbox]'),bar=q('.aira-dv-bar>i');close.disabled=true;
+ const frame=document.createElement('iframe');frame.title='Upload lampiran dengan akun evaluator';frame.style.cssText='display:block;flex:1;min-height:260px;margin:14px 20px 20px;border:1px solid #eee7a0;border-radius:12px;background:#fff';
  const load=()=>{frame.src=DRIVE_WEB_APP_URL+'?job='+encodeURIComponent(job)+'&view=inline&reload='+Date.now();};
- const close=document.createElement('button');close.textContent='Tutup popup';close.disabled=true;close.style.cssText='padding:7px 14px;margin-top:6px';dialog.append(close);
  dialog.append(frame);dialog.addEventListener('cancel',e=>e.preventDefault());document.body.append(dialog);dialog.showModal();load();
  let timer=null,authTimer=null;const started=Date.now();
  const stop=()=>{clearInterval(timer);clearInterval(authTimer);dialog.close();dialog.remove();driveInlineDialogs.delete(job);};
@@ -496,6 +630,9 @@ function openInlineDrivePopup(job){
  reload.onclick=load;
  timer=setInterval(async()=>{const meta=await GM_getValue(driveJobKey(job));if(!meta)return;
   close.disabled=!['error','success'].includes(meta.status);
+  const total=meta.names?.length||0,written=meta.written||0;
+  statusBox.classList.toggle('aira-dv-ind',meta.status!=='uploading'&&meta.status!=='success');statusBox.classList.toggle('aira-dv-done',meta.status==='success');statusBox.classList.toggle('aira-dv-err',meta.status==='error');
+  if(meta.status==='uploading'&&total)bar.style.width=Math.round(written/total*100)+'%';if(meta.status==='success')bar.style.width='100%';
   if(meta.bridgeSeenAt){auth.hidden=true;status.textContent=meta.status==='uploading'?'Mengunggah '+(meta.written||0)+'/'+meta.names.length+' PDF. Akun: '+(meta.account||'memeriksa...'):meta.status==='ready'?'PDF siap. Upload akan dimulai otomatis.':'Menyiapkan lampiran...';}
   else if(Date.now()-started>12000){auth.hidden=false;close.disabled=false;}
   if(meta.status==='error')status.textContent=meta.message||'Upload terhenti. Periksa pesan pada popup sebelum mencoba kembali.';
@@ -505,7 +642,155 @@ function openInlineDrivePopup(job){
 function closeInlineDrivePopup(job){driveInlineDialogs.get(job)?.stop();}
 
 async function clearDriveJob(id){const meta=await GM_getValue(driveJobKey(id));for(let i=0;i<(meta?.names?.length||0);i++)await GM_deleteValue(driveJobKey(id)+':'+i);await GM_deleteValue(driveJobKey(id));const ids=await GM_getValue('inline-drive-user-jobs',[]);await GM_setValue('inline-drive-user-jobs',ids.filter(x=>x!==id));}
+// R21: Simpan Lampiran ke Drive dengan AKUN GOOGLE EVALUATOR MASING-MASING.
+// Halaman Apps Script Drive hanya dibuka sebentar (jendela kecil) untuk mengambil akses akun, lalu ditutup otomatis.
+// Akses disimpan ±50 menit, jadi dalam rentang itu tidak ada jendela sama sekali. Upload berjalan dari INLINE langsung ke Google Drive.
+const DRIVE_AKUN={email:'aira_drive_email',idx:'aira_drive_index',cache:'aira_drive_auth'};
 async function startDriveAccountUpload(button){
+ if(!EXEC_URL.test(DRIVE_WEB_APP_URL))throw Error('URL Apps Script Drive belum diatur. Klik ikon Tampermonkey → Pengaturan INLINE.');
+ const panel=openDrivePanel();
+ try{const r=await attachments(button,true,{panel});if(r===undefined)panel.close();return r;}
+ catch(e){panel.fail(e.message);throw e;}
+}
+function driveAuthUrl(idx,job){return (idx>0?DRIVE_WEB_APP_URL.replace('/macros/s/','/macros/u/'+idx+'/s/'):DRIVE_WEB_APP_URL)+'?mode=auth&job='+encodeURIComponent(job);}
+async function driveAkses(panel,force=false){
+ const want=String(await GM_getValue(DRIVE_AKUN.email,'')||'').toLowerCase();
+ const cached=await GM_getValue(DRIVE_AKUN.cache,null);
+ if(!force&&cached&&cached.exp>Date.now()+5*60*1000&&(!want||cached.email===want))return cached;
+ const saved=Number(await GM_getValue(DRIVE_AKUN.idx,0))||0,order=[saved,...[0,1,2,3,4,5].filter(n=>n!==saved)];
+ const job=crypto.randomUUID();await GM_setValue(driveJobKey(job),{createdAt:Date.now(),kind:'auth'});
+ let win=null;
+ try{
+  for(let k=0;k<order.length;k++){
+   const idx=order[k];panel.step('Menghubungkan akun Google'+(want?' '+want:'')+'…');
+   panel.ask('Jendela kecil Google terbuka sebentar untuk mengambil akses akun, lalu tertutup sendiri. Bila Google meminta login atau izin, selesaikan di jendela itu.',[{t:'Coba akun berikutnya',v:'next'},{t:'Batal',v:'cancel'}]);
+   await GM_setValue(driveJobKey(job),{createdAt:Date.now(),kind:'auth'});
+   if(!win||win.closed){win=window.open(driveAuthUrl(idx,job),'aira-drive-akun','popup=yes,width=520,height=640');if(!win)throw Error('Browser memblokir jendela kecil Google. Izinkan pop-up untuk INLINE (ikon di ujung kanan kolom alamat), lalu ulangi.');}
+   else win.location.href=driveAuthUrl(idx,job);
+   const got=await new Promise(resolve=>{const t=setInterval(async()=>{
+     if(win.closed){clearInterval(t);resolve({cancel:'Jendela Google ditutup sebelum akun terhubung.'});return;}
+     const m=await GM_getValue(driveJobKey(job));if(m?.auth){clearInterval(t);resolve({auth:m.auth});}
+    },400);
+    panel.onAnswer(v=>{clearInterval(t);resolve(v==='next'?{next:true}:{cancel:'Dibatalkan.'});});
+    setTimeout(()=>{clearInterval(t);resolve({next:true});},4*60*1000);});
+   if(got.cancel)throw Error(got.cancel);
+   if(got.next)continue;
+   const a=got.auth;
+   if(want&&a.email!==want){panel.step('Akun '+a.email+' bukan akun Drive Anda, mencoba akun lain…');continue;}
+   if(!want){
+    try{win.close();}catch{}
+    const v=await panel.askWait('Akun Google terdeteksi: <b>'+a.email.replace(/[<>&]/g,'')+'</b>. Simpan lampiran memakai akun ini? Pilihan ini diingat.',[{t:'Ya, pakai akun ini',v:'yes',primary:true},{t:'Akun lain',v:'other'}]);
+    if(v!=='yes'){win=null;continue;}
+    await GM_setValue(DRIVE_AKUN.email,a.email);
+   }
+   await GM_setValue(DRIVE_AKUN.idx,idx);await GM_setValue(DRIVE_AKUN.cache,a);panel.ask('');return a;
+  }
+  throw Error(want?'Akun '+want+' tidak ditemukan pada Chrome ini. Login akun tersebut di Chrome (foto profil → Tambahkan akun), lalu ulangi. Untuk memakai akun lain: ikon Tampermonkey → Ganti akun Google Drive (AIRA).':'Belum ada akun Google yang dipilih.');
+ }finally{try{win&&!win.closed&&win.close();}catch{}await GM_deleteValue(driveJobKey(job));}
+}
+function gapi(method,url,token,{json,body,headers={},timeout=180000}={}){
+ return new Promise((resolve,reject)=>GM_xmlhttpRequest({method,url,timeout,headers:{Authorization:'Bearer '+token,...(json?{'Content-Type':'application/json; charset=UTF-8'}:{}),...headers},data:json?JSON.stringify(json):body,
+  onload:r=>{let v=null;try{v=JSON.parse(r.responseText||'null');}catch{}
+   if(r.status>=200&&r.status<300)return resolve({v,headers:r.responseHeaders||''});
+   const msg=v?.error?.message||('HTTP '+r.status);reject(Object.assign(Error('Google Drive: '+msg),{status:r.status,retry:r.status>=500||r.status===429}));},
+  onerror:()=>reject(Object.assign(Error('Koneksi ke Google Drive terputus.'),{retry:true})),ontimeout:()=>reject(Object.assign(Error('Google Drive belum merespons.'),{retry:true}))}));
+}
+const DRIVE_API='https://www.googleapis.com/drive/v3/files',DRIVE_Q=v=>"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+async function driveCari(token,parent,name,folderOnly){
+ const q='name = '+DRIVE_Q(name)+' and '+DRIVE_Q(parent)+' in parents and trashed = false'+(folderOnly?" and mimeType = 'application/vnd.google-apps.folder'":'');
+ return (await gapi('GET',DRIVE_API+'?supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,size)&q='+encodeURIComponent(q),token)).v?.files||[];
+}
+async function uploadDriveAkun(province,folder,files,button,panel){
+ if(files.length>100)throw Error('Maksimal 100 PDF.');
+ const names=files.map(f=>f.name.slice(f.name.indexOf('/')+1));
+ let auth=await driveAkses(panel);
+ const withAuth=async fn=>{try{return await fn(auth.token);}catch(e){if(e.status!==401)throw e;await GM_deleteValue(DRIVE_AKUN.cache);auth=await driveAkses(panel,true);return await fn(auth.token);}};
+ const parent=auth.folders?.[province];if(!parent)throw Error('Folder Drive provinsi '+province+' belum diatur pada project Drive.');
+ panel.files(names);panel.step('Membuat folder di Drive '+province+'…');panel.account(auth.email);
+ let name=folder,n=1;while((await withAuth(t=>driveCari(t,parent,name,true))).length){if(++n>1000)throw Error('Terlalu banyak folder bernama sama.');name=folder+' ('+n+')';}
+ const made=(await withAuth(t=>gapi('POST',DRIVE_API+'?supportsAllDrives=true&fields=id',t,{json:{name,mimeType:'application/vnd.google-apps.folder',parents:[parent]}}))).v;
+ const folderUrl='https://drive.google.com/drive/folders/'+made.id;panel.folder(name);
+ // R21: urutan di Drive = urutan INLINE (01 paling atas). Diunggah dari PDF terakhir ke PDF pertama dan
+ // waktunya diatur menurun, sehingga 01 menjadi yang terbaru → tampil paling atas saat folder diurutkan menurut waktu maupun nama.
+ let written=0,cur=-1;const t0=Date.now();
+ try{
+  for(let k=0;k<files.length;k++){
+   const i=files.length-1-k;cur=i;const waktu=new Date(t0-i*1000).toISOString();
+   panel.mark(i,'run');panel.step('Mengunggah '+(k+1)+'/'+files.length+' PDF…');button.textContent='Upload '+(k+1)+'/'+files.length;
+   const bytes=files[i].bytes;
+   for(let attempt=1;;attempt++){
+    try{
+     if(attempt>1){const ada=await withAuth(t=>driveCari(t,made.id,names[i],false));if(ada.some(f=>Number(f.size)===bytes.length))break;}
+     await withAuth(async t=>{
+      const start=await gapi('POST','https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',t,{json:{name:names[i],parents:[made.id],createdTime:waktu,modifiedTime:waktu},headers:{'X-Upload-Content-Type':'application/pdf','X-Upload-Content-Length':String(bytes.length)},timeout:60000});
+      const loc=(start.headers.match(/^location:\s*(\S+)/im)||[])[1];if(!loc)throw Object.assign(Error('Google Drive tidak memberi alamat unggah.'),{retry:true});
+      await gapi('PUT',loc,t,{body:new Blob([bytes],{type:'application/pdf'}),headers:{'Content-Type':'application/pdf'}});
+     });
+     break;
+    }catch(e){if(!e.retry||attempt>=3)throw e;panel.step('Koneksi terputus, mengulang '+names[i]+' ('+(attempt+1)+'/3)…');await new Promise(r=>setTimeout(r,2000*attempt));}
+   }
+   written++;panel.mark(i,'ok');panel.progress(written,files.length);
+  }
+ }catch(e){
+  panel.mark(cur,'err');panel.fail(e.message);await new Promise(r=>setTimeout(r,700));panel.close();
+  await driveResult('Penyimpanan belum selesai\n'+written+'/'+files.length+' PDF tersimpan.\n'+e.message+'\nKlik Simpan Lampiran ke Drive lagi untuk mengulang (folder baru akan dibuat), atau lengkapi manual di folder ini.',folderUrl);
+  return false;
+ }
+ panel.done();await new Promise(r=>setTimeout(r,650));panel.close();
+ await driveResult('Proses Berhasil\n'+written+'/'+files.length+' PDF tersimpan.\nAkun upload: '+auth.email+'\nProvinsi: '+province+'\nFolder: '+name,folderUrl);
+ return true;
+}
+function openDrivePanel(){
+ const dialog=airaDialog();dialog.style.cssText='width:min(560px,94vw);max-height:min(640px,90vh);padding:0;border:0;border-radius:16px;box-sizing:border-box;color:#1d2939;background:#fff;font:14px/1.5 "Segoe UI",Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden';
+ dialog.innerHTML=`<style>
+  .aira-dv-spin{width:16px;height:16px;border-radius:50%;border:2.5px solid #eee7a0;border-top-color:#111;animation:aira-dv-rot .8s linear infinite;flex:none}
+  .aira-dv-done .aira-dv-spin{border-color:#067647;animation:none;background:#067647}.aira-dv-err .aira-dv-spin{border-color:#b42318;animation:none;background:#b42318}
+  @keyframes aira-dv-rot{to{transform:rotate(360deg)}}
+  .aira-dv-bar{height:6px;border-radius:99px;background:#f3eeb8;overflow:hidden;margin-top:10px}.aira-dv-bar>i{display:block;height:100%;width:0;background:#111;border-radius:99px;transition:width .4s cubic-bezier(.2,.9,.3,1)}
+  .aira-dv-done .aira-dv-bar>i{background:#067647}.aira-dv-err .aira-dv-bar>i{background:#b42318}
+  .aira-dv-ind .aira-dv-bar>i{width:35%;animation:aira-dv-slide 1.2s ease-in-out infinite}@keyframes aira-dv-slide{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+  .aira-dv-list{list-style:none;margin:0;padding:6px 20px 18px;overflow:auto;flex:1}
+  .aira-dv-list li{display:flex;gap:10px;align-items:center;padding:6px 10px;border-radius:9px;font-size:13px;color:#667085;transition:background .25s,color .25s}
+  .aira-dv-list li b{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid #e4e7ec;display:grid;place-items:center;font-size:11px;color:#fff;transition:all .25s}
+  .aira-dv-list li.run{background:#fffbd1;color:#101828;font-weight:600}.aira-dv-list li.run b{border-color:#eee7a0;border-top-color:#111;animation:aira-dv-rot .8s linear infinite}
+  .aira-dv-list li.ok{color:#101828}.aira-dv-list li.ok b{background:#067647;border-color:#067647;animation:aira-dv-pop .3s cubic-bezier(.2,.9,.3,1.5)}
+  .aira-dv-list li.err{background:#fef3f2;color:#b42318}.aira-dv-list li.err b{background:#b42318;border-color:#b42318}
+  @keyframes aira-dv-pop{from{transform:scale(.4)}to{transform:scale(1)}}
+  .aira-dv-list span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ </style>
+ <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:#f5e62a;border-bottom:1px solid rgba(17,17,17,.12)">
+  <div style="width:38px;height:38px;border-radius:10px;background:#111;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="22" height="22"><g fill="#f5e62a"><path d="M8 3h8l7.5 13h-7.7z"/><path d="M8 3l4 6.6-7.7 12.9-3.8-6.5z"/><path d="M8.2 16h15.3l-3.8 6.5H4.3z"/></g></svg></div>
+  <div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:bold;letter-spacing:.08em;color:#6b6413">AIRA · SIMPAN LAMPIRAN KE DRIVE</div><h2 data-a="title" style="margin:0;font-size:17px">Menyimpan lampiran ke Google Drive</h2></div>
+ </div>
+ <div data-a="box" class="aira-dv-ind" style="padding:14px 20px">
+  <div style="display:flex;align-items:center;gap:10px"><span class="aira-dv-spin"></span><span data-a="status" style="font-weight:600">Membaca lampiran dari INLINE…</span></div>
+  <div data-a="sub" style="font-size:12.5px;color:#667085;margin:2px 0 0 26px">Disimpan dengan akun Google Anda. Biarkan jendela ini terbuka sampai selesai.</div>
+  <div class="aira-dv-bar"><i></i></div>
+ </div>
+ <div data-a="ask" hidden style="margin:0 20px 12px;padding:12px 14px;border:1px solid #fedf89;background:#fffaeb;border-radius:12px;color:#93370d"></div>
+ <ul class="aira-dv-list" data-a="list"></ul>`;
+ const q=x=>dialog.querySelector(x),status=q('[data-a=status]'),sub=q('[data-a=sub]'),box=q('[data-a=box]'),bar=q('.aira-dv-bar>i'),list=q('[data-a=list]'),askBox=q('[data-a=ask]');let answerFn=null;
+ dialog.addEventListener('cancel',e=>e.preventDefault());document.body.append(dialog);dialog.showModal();
+ let open=true;
+ return {
+  reading(n,total){status.textContent='Membaca lampiran dari INLINE '+n+'/'+total+'…';},
+  files(names){box.classList.add('aira-dv-ind');list.innerHTML='';for(const n of names){const li=document.createElement('li');li.innerHTML='<b></b><span></span>';li.lastChild.textContent=n;li.title=n;list.append(li);}},
+  folder(name){sub.textContent='Folder: '+name;},
+  step(t){status.textContent=t;},
+  mark(i,c){const li=list.children[i];if(!li)return;li.className=c;if(c==='ok')li.firstChild.textContent='✓';if(c==='err')li.firstChild.textContent='!';if(c==='run')li.scrollIntoView({block:'nearest',behavior:'smooth'});},
+  progress(n,total){box.classList.remove('aira-dv-ind');bar.style.width=Math.round(n/total*100)+'%';},
+  done(){box.classList.remove('aira-dv-ind');box.classList.add('aira-dv-done');bar.style.width='100%';status.textContent='Semua PDF tersimpan.';},
+  fail(t){box.classList.remove('aira-dv-ind');box.classList.add('aira-dv-err');status.textContent='Upload terhenti';sub.textContent=t;if(!list.children.length)setTimeout(()=>this.close(),900);},
+  account(email){sub.textContent='Akun: '+email;},
+  ask(html,buttons=[]){answerFn=null;askBox.hidden=!html;askBox.innerHTML='<div style="font-size:13px;margin-bottom:'+(buttons.length?'10px':'0')+'"></div>';askBox.firstChild.innerHTML=html;
+   for(const b of buttons){const el=document.createElement('button');el.type='button';el.textContent=b.t;if(b.primary)el.className='aira-primary';el.style.marginRight='6px';el.onclick=()=>{const f=answerFn;answerFn=null;askBox.hidden=true;f&&f(b.v);};askBox.append(el);}},
+  onAnswer(f){answerFn=f;},
+  askWait(html,buttons){return new Promise(r=>{this.ask(html,buttons);answerFn=r;});},
+  close(){if(!open)return;open=false;try{dialog.close();}catch{}dialog.remove();}
+ };
+}
+// --- Cara lama (cadangan bila Apps Script Sheets belum diperbarui ke R21) ---
+async function startDriveAccountUploadLama(button){
  if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(DRIVE_WEB_APP_URL))throw Error('URL Apps Script Drive belum diatur. Klik ikon Tampermonkey → Pengaturan INLINE.');
  const job=crypto.randomUUID();
  const ids=await GM_getValue('inline-drive-user-jobs',[]);for(const id of ids){const old=await GM_getValue(driveJobKey(id));if(!old||Date.now()-old.createdAt>30*60*1000)await clearDriveJob(id);}
@@ -586,6 +871,89 @@ function chooseMasterNote(auto,last){
   lockDialogStyle(d);document.body.append(d);d.showModal();ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
  });
 }
+// R20: satu pop up untuk Nomor baris + Catatan.
+// mode 'master' (Pengusahaan/Persetujuan): setelah nomor baris diisi, catatan terakhir di baris itu dibaca otomatis.
+// mode 'imbuhan' (Sumur Pantau/Imbuhan): pilihan catatan Sesuai / Ada catatan.
+function chooseRowAndNote({mode='master',auto='',tracking='',tab='Master data'}={}){
+ return new Promise(resolve=>{
+  const d=airaDialog();
+  d.style.cssText='width:min(680px,calc(100vw - 40px));max-height:90vh;overflow:auto;box-sizing:border-box;border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
+  const box='margin:0 0 10px;padding:10px 12px;border-radius:10px;';
+  d.innerHTML=`<form novalidate><h2 style="margin:0 0 4px;font-size:20px">Nomor baris & catatan</h2>
+  <p style="margin:0 0 14px;color:#556;font-size:13px">Tujuan: tab <b>${tab.replace(/[<>&]/g,'')}</b> pada Form Data Evaluator.</p>
+  <label for="aira-row" style="display:block;font-weight:bold;margin-bottom:4px">Nomor baris pada Google Sheets</label>
+  <div style="display:flex;gap:10px;align-items:center"><input id="aira-row" type="text" inputmode="numeric" autocomplete="off" placeholder="mis. 15190" style="width:180px;box-sizing:border-box;padding:10px;border:1px solid #9caabc;border-radius:6px;font:inherit"><span data-a="rowstate" style="font-size:12.5px;color:#667085"></span></div>
+  <details style="margin:8px 0 14px;font-size:12.5px;color:#475467"><summary style="cursor:pointer;font-weight:bold;color:#6b6413">Ketentuan nomor baris</summary><ul style="margin:6px 0 0;padding-left:18px"><li>Tulis dulu nama evaluator Anda pada kolom Evaluator di baris tersebut.</li><li>Gunakan <b>nomor baris Google Sheets</b>, bukan kolom "No".</li><li>Salah nomor baris dapat menimpa data evaluator lain.</li></ul></details>
+  <div style="border-top:1px solid #eee7a0;margin:0 0 12px"></div>
+  <div style="font-weight:bold;margin-bottom:6px">Catatan</div>
+  ${mode==='imbuhan'?`<label style="display:flex;gap:8px;align-items:center;padding:4px 0;cursor:pointer"><input type="radio" name="n" value="ok" checked> <b>Sesuai</b></label><label style="display:flex;gap:8px;align-items:center;padding:4px 0;cursor:pointer"><input type="radio" name="n" value="custom"> Ada catatan</label>`:
+  `<div data-a="prevbox" hidden style="${box}border:1px solid #eee7a0;background:#fffbd1"><div style="font-size:11.5px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#6b6413;margin-bottom:4px">Catatan terakhir (baris ini)</div><div data-a="prev" style="white-space:pre-wrap;font-size:13.5px;color:#1d2939"></div></div>
+  <div data-a="autobox" hidden style="${box}border:1px dashed #d0d5dd;font-size:12.5px;color:#475467"><b>Catatan otomatis terbaru:</b> <span data-a="auto"></span></div>`}
+  <textarea rows="4" ${mode==='imbuhan'?'disabled placeholder="Tulis catatan…"':''} style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #9caabc;border-radius:6px;font:14px/1.5 Arial,sans-serif;resize:vertical"></textarea>
+  <div data-a="state" style="margin-top:6px;font-size:12.5px;font-weight:bold;min-height:1em"></div>
+  <div role="alert" hidden style="color:#b42318;margin-top:6px"></div>
+  <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap"><span style="display:flex;gap:8px;flex-wrap:wrap">${mode==='imbuhan'?'':'<button type="button" data-a="sync" hidden title="Ganti baris CAT, zona, dan debit optimum lama dengan hasil cek terbaru; catatan lain tetap">Perbarui</button><button type="button" data-a="reset">Kembalikan otomatis</button>'}</span>
+  <span style="display:flex;gap:8px"><button type="button" data-a="cancel">Batal</button><button type="submit">Lanjutkan</button></span></div></form>`;
+  const q=x=>d.querySelector(x),row=q('#aira-row'),ta=q('textarea'),err=q('[role=alert]'),state=q('[data-a=state]'),rowstate=q('[data-a=rowstate]'),submit=q('button[type=submit]');
+  let prev=null,known=false,edited=false,checking=null,checkedRow=null,blocked='';
+  const fail=m=>{err.hidden=false;err.textContent=m;};
+  const valid=v=>/^\d+$/.test(v)&&Number.isSafeInteger(Number(v))&&Number(v)>=2;
+  const show=()=>{
+   if(mode==='imbuhan'||!known||!prev){state.textContent='';return;}
+   const now=noteNorm(ta.value);
+   if(now===prev){state.style.color='#067647';state.textContent='✓ Catatan tetap (tidak ada revisi/penambahan)';}
+   else{state.style.color='#93370d';state.textContent=now.startsWith(prev)?'✎ Ada penambahan catatan':'✎ Catatan direvisi';}
+  };
+  if(mode!=='imbuhan'){
+   ta.value=auto||'';
+   ta.addEventListener('input',()=>{edited=true;show();});
+   q('[data-a=reset]').onclick=()=>{ta.value=prev||auto||'';edited=false;show();ta.focus();};
+   q('[data-a=sync]').onclick=()=>{const lines=ta.value.split(/\r?\n/);let hit=false;const out=lines.map(l=>{if(!hit&&NOTE_MANAGED.test(l.trim())){hit=true;return auto;}return l;});ta.value=hit?out.join('\n'):(auto+(ta.value.trim()?'\n'+ta.value:''));edited=true;show();ta.focus();};
+   // Baca catatan terakhir setiap kali nomor baris berubah (jeda singkat setelah berhenti mengetik).
+   let timer=null;
+   const check=async()=>{
+    const v=row.value.trim();err.hidden=true;blocked='';
+    if(!valid(v)){rowstate.textContent=v?'Nomor baris minimal 2':'';return;}
+    if(checkedRow===v)return;
+    rowstate.style.color='#667085';rowstate.textContent='Memeriksa baris…';const my=v;
+    checking=readMasterNote(Number(v),tracking).catch(e=>({error:e.message}));const cur=await checking;checking=null;
+    if(row.value.trim()!==my)return;checkedRow=my;
+    if(!cur){known=false;prev=null;rowstate.style.color='#93370d';rowstate.textContent='Catatan lama tidak dapat dibaca; catatan otomatis dipakai';q('[data-a=prevbox]').hidden=true;q('[data-a=autobox]').hidden=true;q('[data-a=sync]').hidden=true;if(!edited)ta.value=auto||'';show();return;}
+    if(cur.error){rowstate.textContent='';blocked=cur.error;fail(cur.error);return;}
+    if(cur.tracking&&tracking&&cur.tracking!==tracking){blocked='Baris '+my+' sudah berisi tracking '+cur.tracking+'. Pilih baris lain.';rowstate.style.color='#b42318';rowstate.textContent='✕ Dipakai permohonan lain';fail(blocked);return;}
+    known=true;prev=noteNorm(cur.catatan)||null;
+    rowstate.style.color='#067647';rowstate.textContent=cur.tracking?'✓ Baris permohonan ini (revisi)':(cur.evaluator?'✓ Baris kosong · '+cur.evaluator:'✓ Baris kosong');
+    q('[data-a=prevbox]').hidden=!prev;q('[data-a=autobox]').hidden=!prev;q('[data-a=sync]').hidden=!prev;
+    if(prev){q('[data-a=prev]').textContent=prev;q('[data-a=auto]').textContent=auto||'-';q('[data-a=reset]').textContent='Kembalikan catatan terakhir';if(!edited)ta.value=prev;}
+    else{q('[data-a=reset]').textContent='Kembalikan otomatis';if(!edited)ta.value=auto||'';}
+    show();
+   };
+   row.addEventListener('input',()=>{checkedRow=null;known=false;clearTimeout(timer);timer=setTimeout(check,500);});
+   row.addEventListener('blur',()=>{clearTimeout(timer);check();});
+  }else{
+   d.querySelectorAll('input[name=n]').forEach(r=>r.onchange=()=>{ta.disabled=d.querySelector('input[value=custom]').checked===false;if(!ta.disabled)ta.focus();});
+  }
+  let done=false;const finish=v=>{if(done)return;done=true;d.close();d.remove();resolve(v);};
+  q('[data-a=cancel]').onclick=()=>finish(null);d.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
+  q('form').onsubmit=async e=>{
+   e.preventDefault();err.hidden=true;const v=row.value.trim();
+   if(!valid(v)){fail('Nomor baris harus bilangan bulat minimal 2.');row.focus();return;}
+   if(mode==='imbuhan'){
+    const custom=d.querySelector('input[value=custom]').checked,text=ta.value.trim();
+    if(custom&&!text){fail('Tulis catatannya, atau pilih Sesuai.');ta.focus();return;}
+    if(text.length>5000){fail('Catatan maksimal 5.000 karakter.');return;}
+    return finish({row:Number(v),note:custom?text:'Sesuai'});
+   }
+   if(checkedRow!==v){submit.disabled=true;submit.textContent='Memeriksa…';await (async()=>{await check();})();submit.disabled=false;submit.textContent='Lanjutkan';}
+   if(blocked){fail(blocked);return;}
+   const text=noteNorm(ta.value);
+   if(!text){fail('Catatan tidak boleh kosong.');ta.focus();return;}
+   if(text.length>5000){fail('Catatan maksimal 5.000 karakter.');return;}
+   finish({row:Number(v),note:{text,utuh:known,changed:prev?text!==prev:true,hadPrev:!!prev}});
+  };
+  lockDialogStyle(d);document.body.append(d);d.showModal();row.focus();
+ });
+}
 function chooseTargetRow(){
  return new Promise(resolve=>{
   const dialog=airaDialog();
@@ -622,18 +990,13 @@ async function complete(clicked){
  if(!contact.telp||!contact.email)throw Error('Telepon/email Profil Badan Usaha belum terbaca.');
  data.telp=contact.telp;data.email=contact.email;
  data.wilayah=region.fields;
- const selected=await chooseTargetRow();
- if(selected===null)return;
- if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
- data.targetRow=Number(selected);
- {const cur=await readMasterNote(data.targetRow,data.tracking);
-  if(cur&&cur.tracking&&data.tracking&&cur.tracking!==data.tracking)throw Error('Baris '+data.targetRow+' sudah berisi tracking '+cur.tracking+'. Pilih baris lain.');
-  const note=await chooseMasterNote(data.wilayah.catatan,cur?cur.catatan:undefined);if(note===null)return;
+ {const pick=await chooseRowAndNote({mode:'master',auto:data.wilayah.catatan,tracking:data.tracking,tab:'Master data'});if(pick===null)return;
+  data.targetRow=pick.row;const note=pick.note;
   data.wilayah.catatan=note.text;data.wilayah.catatanUtuh=note.utuh;data.catatanInfo=note.hadPrev?(note.changed?'Catatan: diperbarui':'Catatan: tetap (tidak berubah)'):'';}
- if(!confirm('Kirim ke Sheets bersama, baris '+data.targetRow+'?\n'+data.nama+' | '+data.sumur+'\nID: '+data.id+' | Tracking: '+data.tracking+'\n'+data.jenis+' | Akuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\n'+(data.catatanInfo?data.catatanInfo+'\n':'')+data.wilayah.catatan))return;
- alert(await send(data));
+ if(!await AIRA_MODAL.ask('Kirim ke Sheets bersama, baris '+data.targetRow+'?\n'+data.nama+' | '+data.sumur+'\nID: '+data.id+' | Tracking: '+data.tracking+'\n'+data.jenis+' | Akuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\n'+(data.catatanInfo?data.catatanInfo+'\n':'')+data.wilayah.catatan))return;
+ await AIRA_MODAL.done(await send(data),{source:'Data Lengkap Pengusahaan'});
 }
-function button(text,bottom,fn){const b=document.createElement('button');b.textContent=text;b.style.cssText='position:fixed;right:25px;bottom:'+bottom+'px;z-index:99999;background:#244b8c;color:white;padding:12px;border:0;border-radius:8px;cursor:pointer';document.body.append(b);b.onclick=async()=>{const clicked=today();b.disabled=true;b.textContent='Memproses…';try{await fn(b,clicked);}catch(e){alert(e.message);}finally{b.disabled=false;b.textContent=text;}};return b;}
+function button(text,bottom,fn){const b=document.createElement('button');b.textContent=text;b.style.cssText='position:fixed;right:25px;bottom:'+bottom+'px;z-index:99999;background:#244b8c;color:white;padding:12px;border:0;border-radius:8px;cursor:pointer';document.body.append(b);b.onclick=async()=>{const clicked=today();b.disabled=true;b.textContent='Memproses…';try{await fn(b,clicked);}catch(e){await AIRA_MODAL.error(e.message,{source:text});}finally{b.disabled=false;b.textContent=text;}};return b;}
 button('Download Lampiran',90,b=>attachments(b));
 button('Simpan Lampiran ke Drive',365,b=>startDriveAccountUpload(b));
 button('Data Lengkap Pengusahaan',145,(_,date)=>complete(date));
@@ -687,13 +1050,11 @@ async function completeImbuhan(clicked){
  if(!data.tracking||!data.nama)throw Error('Tracking atau nama Instansi/Perusahaan belum terbaca.');
  const region=await regionLookup([c.lng,c.lat],true,data.screen);
  data.wilayah=region.fields;
- const selected=await chooseTargetRow();if(selected===null)return;
- if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
- data.targetRow=Number(selected);
  const tab=kind==='imbuhan'?'Sumur Imbuhan':'Sumur Pantau';
- const note=await chooseImbuhanNote();if(note===null)return;data.catatan=note;
- if(!confirm('Kirim ke tab "'+tab+'", baris '+data.targetRow+'?\nCatatan: '+data.catatan+' | Tanggal evaluasi: '+data.evaluasi+'\n'+data.nama+' | '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+(f.peruntukan||'-')+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\nKedalaman: '+data.kedalaman+' m | Diameter: '+data.diameter+' inch | Screen: '+data.screen+(kind==='imbuhan'?' | Akuifer diimbuh: '+(data.akuifer||'-')+(v.akuifer?'':' (puluhan dari saringan teratas)'):'')+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\nCAT '+data.wilayah.cat+(kind==='imbuhan'?' | Zona '+data.wilayah.zona:'')))return;
- alert(await send(data,'sumur_pantau_imbuhan'));
+ const pick=await chooseRowAndNote({mode:'imbuhan',tab});if(pick===null)return;
+ data.targetRow=pick.row;data.catatan=pick.note;
+ if(!await AIRA_MODAL.ask('Kirim ke tab "'+tab+'", baris '+data.targetRow+'?\nCatatan: '+data.catatan+' | Tanggal evaluasi: '+data.evaluasi+'\n'+data.nama+' | '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+(f.peruntukan||'-')+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\nKedalaman: '+data.kedalaman+' m | Diameter: '+data.diameter+' inch | Screen: '+data.screen+(kind==='imbuhan'?' | Akuifer diimbuh: '+(data.akuifer||'-')+(v.akuifer?'':' (puluhan dari saringan teratas)'):'')+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\nCAT '+data.wilayah.cat+(kind==='imbuhan'?' | Zona '+data.wilayah.zona:'')))return;
+ await AIRA_MODAL.done(await send(data,'sumur_pantau_imbuhan'),{source:'Data Lengkap Sumur Pantau/Imbuhan'});
 }
 button('Data Lengkap Sumur Pantau/Imbuhan',475,(_,date)=>completeImbuhan(date));
 
@@ -723,15 +1084,11 @@ async function completeSetuju(clicked){
  // Tidak ada kolom alamat lokasi sumur pada form persetujuan: lokasi = administrasi hasil cek wilayah.
  const w=data.wilayah,kab=/^(Kabupaten|Kota)\b/i.test(w.kabupaten)?w.kabupaten:(/kota/i.test(f.kab)?'Kota ':'Kabupaten ')+w.kabupaten;
  data.lokasi=(/^kota\b/i.test(kab)?'Kelurahan ':'Desa ')+w.desa+', Kecamatan '+w.kecamatan+', '+kab+', Provinsi '+w.provinsi;
- const selected=await chooseTargetRow();if(selected===null)return;
- if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
- data.targetRow=Number(selected);
- {const cur=await readMasterNote(data.targetRow,data.tracking);
-  if(cur&&cur.tracking&&data.tracking&&cur.tracking!==data.tracking)throw Error('Baris '+data.targetRow+' sudah berisi tracking '+cur.tracking+'. Pilih baris lain.');
-  const note=await chooseMasterNote(data.wilayah.catatan,cur?cur.catatan:undefined);if(note===null)return;
+ {const pick=await chooseRowAndNote({mode:'master',auto:data.wilayah.catatan,tracking:data.tracking,tab:'Master data'});if(pick===null)return;
+  data.targetRow=pick.row;const note=pick.note;
   data.wilayah.catatan=note.text;data.wilayah.catatanUtuh=note.utuh;data.catatanInfo=note.hadPrev?(note.changed?'Catatan: diperbarui':'Catatan: tetap (tidak berubah)'):'';}
- if(!confirm('Kirim Persetujuan ke Master data, baris '+data.targetRow+'?\n'+data.nama+' | Sumur '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+data.peruntukan+' ('+data.klasifikasi+')\nAkuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nMasa berlaku: '+(typeof masa==='number'?masa+' tahun':masa)+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.lokasi+'\n'+w.catatan+(data.telp&&data.email?'':'\n\nCatatan: telepon/email profil tidak terbaca; kolom tersebut dikosongkan.')))return;
- alert(await send(data));
+ if(!await AIRA_MODAL.ask('Kirim Persetujuan ke Master data, baris '+data.targetRow+'?\n'+data.nama+' | Sumur '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+data.peruntukan+' ('+data.klasifikasi+')\nAkuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nMasa berlaku: '+(typeof masa==='number'?masa+' tahun':masa)+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.lokasi+'\n'+w.catatan+(data.telp&&data.email?'':'\n\nCatatan: telepon/email profil tidak terbaca; kolom tersebut dikosongkan.')))return;
+ await AIRA_MODAL.done(await send(data),{source:'Data Lengkap Persetujuan'});
 }
 button('Data Lengkap Persetujuan',475,(_,date)=>completeSetuju(date));
 
@@ -766,11 +1123,11 @@ async function dewRun(){
  const rows=await dewLoadWells(tableUrl);
  data.wells=rows.map(w=>({sumur:dewTextHTML(w['Sumur Bor/Gali Dewatering']),lng:dewCoordinate(w['Longitude (X)'],'Longitude'),lat:dewCoordinate(w['Latitude (Y)'],'Latitude'),kedalaman:dewNum(w['Kedalaman Sumur Bor/Gali Dewatering (m)'],'Kedalaman sumur'),pompaDepth:dewNum(w['Kedalaman Pompa (m)'],'Kedalaman pompa'),debit:dewNum(w['Debit Pengambilan Air Tanah (m3/hari)'],'Debit')}));
  const selected=await dewChooseTargetRow();if(selected===null)return;data.targetRow=selected.row;data.metode=selected.metode;data.pompa=selected.pompa;data.keterangan=selected.keterangan;
- if(!confirm('Kirim Dewatering ke baris '+data.targetRow+'–'+(data.targetRow+rows.length-1)+'?\n'+data.nama+' | Tracking: '+tracking+'\n'+rows.length+' sumur | Masa berlaku evaluator: '+data.masa+' bulan\nMetode: '+data.metode+'\nPompa: '+data.pompa+'\nData teknis dan masa berlaku diambil dari form yang sudah tersimpan.\n'+(!data.metode||!data.pompa?'Metode/pompa yang tidak tersedia di form tetap diisi manual.':'')))return;
+ if(!await AIRA_MODAL.ask('Kirim Dewatering ke baris '+data.targetRow+'–'+(data.targetRow+rows.length-1)+'?\n'+data.nama+' | Tracking: '+tracking+'\n'+rows.length+' sumur | Masa berlaku evaluator: '+data.masa+' bulan\nMetode: '+data.metode+'\nPompa: '+data.pompa+'\nData teknis dan masa berlaku diambil dari form yang sudah tersimpan.\n'+(!data.metode||!data.pompa?'Metode/pompa yang tidak tersedia di form tetap diisi manual.':'')))return;
  if(!WEB_APP_URL.startsWith('https://script.google.com/macros/s/')||TOKEN==='ISI_TOKEN_DI_SINI')throw Error('URL/token belum diatur. Klik ikon Tampermonkey → Pengaturan INLINE.');
- const result=await dewRequest(WEB_APP_URL,'POST',{token:TOKEN,action:'dewatering',data});let saved;try{saved=JSON.parse(result);}catch{throw Error('Respons Google belum terkonfirmasi. Cek Sheets Dewatering sebelum mengirim ulang.');}if(!saved.ok)throw Error(saved.message||'Pengiriman ditolak.');alert(saved.message);
+ const result=await dewRequest(WEB_APP_URL,'POST',{token:TOKEN,action:'dewatering',data});let saved;try{saved=JSON.parse(result);}catch{throw Error('Respons Google belum terkonfirmasi. Cek Sheets Dewatering sebelum mengirim ulang.');}if(!saved.ok)throw Error(saved.message||'Pengiriman ditolak.');await AIRA_MODAL.done(saved.message,{source:'Data Lengkap Dewatering'});
 }
-const dewButton=document.createElement('button');dewButton.textContent='Data Lengkap Dewatering';dewButton.style.cssText='position:fixed;right:25px;bottom:200px;z-index:99999;background:#244b8c;color:white;padding:12px;border:0;border-radius:8px;cursor:pointer';document.body.append(dewButton);dewButton.onclick=async()=>{dewButton.disabled=true;try{await dewRun();}catch(e){alert(e.message);}finally{dewButton.disabled=false;}};
+const dewButton=document.createElement('button');dewButton.textContent='Data Lengkap Dewatering';dewButton.style.cssText='position:fixed;right:25px;bottom:200px;z-index:99999;background:#244b8c;color:white;padding:12px;border:0;border-radius:8px;cursor:pointer';document.body.append(dewButton);dewButton.onclick=async()=>{dewButton.disabled=true;try{await dewRun();}catch(e){await AIRA_MODAL.error(e.message,{source:'Data Lengkap Dewatering'});}finally{dewButton.disabled=false;}};
 // Tabel sumur Dewatering memakai DataTables server-side: satu permintaan hanya memberi satu halaman (mis. 10 sumur).
 // Bila recordsTotal lebih besar, minta ulang dengan panjang halaman = total, lalu (bila server membatasi) ambil per halaman.
 async function dewLoadWells(tableUrl){
@@ -902,7 +1259,7 @@ async function returnRun(){
  const note=returnLatestNote(await returnReadHistory(),identity.authors);
  // Tanpa ID Izin OSS (Persetujuan): kolom id diisi nomor tracking, sama seperti Master data.
  const result=await returnRpc('pengembalian',{id:(id&&!/^-+$/.test(id))?id:(kind?tracking:id),tracking,company,province,permit,note:note.text,noteAuthor:note.author,noteTime:note.timestamp,clickedAt});
- driveResult((result.already?'Sudah tercatat':'Proses Berhasil')+'\nPengembalian tercatat pada baris '+result.row+'.\nEvaluator: '+result.evaluator+'\nTanggal pengembalian: '+result.date+'\nCatatan tersimpan: '+note.author+' @ '+note.timestamp,'https://docs.google.com/spreadsheets/d/1ZW9nmnYmrNIPVGifHxo0CBPweDHgj9WRIwWpo-59owE/edit');
+ driveResult((result.already?'Sudah tercatat':'Proses Berhasil')+'\nPengembalian tercatat pada baris '+result.row+'.\nEvaluator: '+(result.nama||note.author||result.evaluator)+'\nTanggal pengembalian: '+result.date+'\nWaktu catatan: '+note.timestamp,'https://docs.google.com/spreadsheets/d/1ZW9nmnYmrNIPVGifHxo0CBPweDHgj9WRIwWpo-59owE/edit');
 }
 button('Pengembalian',420,()=>returnRun());
 // R19: tombol Data Lengkap hanya tampil pada jenis izinnya masing-masing.
