@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.2
+// @version      3.8.3
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -554,6 +554,28 @@ function imbuhanCoord(text){
  let a=Number(m[1]),b=Number(m[2]);const lat=Math.abs(a)<=90&&Math.abs(b)>90?a:Math.abs(b)<=90&&Math.abs(a)>90?b:a,lng=lat===a?b:a;
  if(Math.abs(lng)>180||Math.abs(lat)>90)throw Error('Koordinat Lokasi di luar rentang.');return {lng,lat,lngText:lat===a?m[2]:m[1],latText:lat===a?m[1]:m[2]};
 }
+// R20: pilihan Catatan untuk tab Sumur Imbuhan/Pantau ("Sesuai" atau catatan sendiri).
+function chooseImbuhanNote(){
+ return new Promise(resolve=>{
+  const d=document.createElement('dialog');
+  d.style.cssText='width:min(520px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
+  d.innerHTML=`<form method="dialog"><h3 style="margin:0 0 10px;font-size:18px">Catatan evaluasi</h3>
+  <label style="display:flex;gap:8px;align-items:center;padding:6px 0;cursor:pointer"><input type="radio" name="n" value="ok" checked> <b>Sesuai</b></label>
+  <label style="display:flex;gap:8px;align-items:center;padding:6px 0;cursor:pointer"><input type="radio" name="n" value="custom"> Ada catatan</label>
+  <textarea rows="4" disabled placeholder="Tulis catatan…" style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border:1px solid #9caabc;border-radius:6px;font:14px Arial,sans-serif;resize:vertical"></textarea>
+  <div role="alert" hidden style="color:#b42318;margin-top:6px"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button type="button" data-a="cancel" style="padding:9px 16px;border:0;border-radius:6px;background:#e4e7ec;cursor:pointer">Batal</button><button type="submit" style="padding:9px 16px;border:0;border-radius:6px;background:#1f6f43;color:#fff;font-weight:bold;cursor:pointer">Lanjut</button></div></form>`;
+  const ta=d.querySelector('textarea'),err=d.querySelector('[role=alert]');let done=false;
+  const finish=v=>{if(done)return;done=true;d.close();d.remove();resolve(v);};
+  d.querySelectorAll('input[name=n]').forEach(r=>r.onchange=()=>{ta.disabled=r.value!=='custom'||!r.checked;if(!ta.disabled)ta.focus();});
+  d.querySelector('[data-a=cancel]').onclick=()=>finish(null);d.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
+  d.querySelector('form').onsubmit=e=>{e.preventDefault();const custom=d.querySelector('input[value=custom]').checked;const text=ta.value.trim();
+   if(custom&&!text){err.hidden=false;err.textContent='Tulis catatannya, atau pilih Sesuai.';return;}
+   if(text.length>5000){err.hidden=false;err.textContent='Catatan maksimal 5.000 karakter.';return;}
+   finish(custom?text:'Sesuai');};
+  document.body.append(d);d.showModal();
+ });
+}
 async function completeImbuhan(clicked){
  const full=detail('Jenis Izin');if(!/sumur\s+pantau|imbuhan/i.test(full))throw Error('Tombol ini khusus Persetujuan Penggunaan Sumur Pantau/Imbuhan.');
  const f=await frame('OSS_IMBUHAN');if(!f.exists)throw Error('Form Rencana Teknis Sumur Input Evaluator tidak ditemukan. Buka bagian Data Permohonan lalu coba lagi.');
@@ -574,7 +596,8 @@ async function completeImbuhan(clicked){
  if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
  data.targetRow=Number(selected);
  const tab=kind==='imbuhan'?'Sumur Imbuhan':'Sumur Pantau';
- if(!confirm('Kirim ke tab "'+tab+'", baris '+data.targetRow+'?\n'+data.nama+' | '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+(f.peruntukan||'-')+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\nKedalaman: '+data.kedalaman+' m | Diameter: '+data.diameter+' inch | Screen: '+data.screen+(kind==='imbuhan'?' | Akuifer diimbuh: '+(data.akuifer||'-')+(v.akuifer?'':' (puluhan dari saringan teratas)'):'')+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\nCAT '+data.wilayah.cat+(kind==='imbuhan'?' | Zona '+data.wilayah.zona:'')))return;
+ const note=await chooseImbuhanNote();if(note===null)return;data.catatan=note;
+ if(!confirm('Kirim ke tab "'+tab+'", baris '+data.targetRow+'?\nCatatan: '+data.catatan+' | Tanggal evaluasi: '+data.evaluasi+'\n'+data.nama+' | '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+(f.peruntukan||'-')+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\nKedalaman: '+data.kedalaman+' m | Diameter: '+data.diameter+' inch | Screen: '+data.screen+(kind==='imbuhan'?' | Akuifer diimbuh: '+(data.akuifer||'-')+(v.akuifer?'':' (puluhan dari saringan teratas)'):'')+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\nCAT '+data.wilayah.cat+(kind==='imbuhan'?' | Zona '+data.wilayah.zona:'')))return;
  alert(await send(data,'sumur_pantau_imbuhan'));
 }
 button('Data Lengkap Sumur Pantau/Imbuhan',475,(_,date)=>completeImbuhan(date));
