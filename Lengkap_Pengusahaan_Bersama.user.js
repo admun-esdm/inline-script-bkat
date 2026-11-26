@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.5
+// @version      3.8.9
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -40,14 +40,44 @@ function loadConfig(){
  return {shared,sharedDrive};
 }
 loadConfig();
+// R20: tampilan AIRA untuk semua dialog script (warna kuning ESDM + gerak halus).
+const AIRA_CSS=`
+dialog.aira-dlg{border:0!important;border-top:6px solid #f5e62a!important;border-radius:16px!important;box-shadow:0 24px 64px rgba(16,24,40,.35)!important;font-family:"Segoe UI",Arial,sans-serif!important;color:#1d2939!important;animation:aira-pop .24s cubic-bezier(.2,.9,.3,1.2)}
+dialog.aira-dlg::backdrop{background:rgba(15,23,42,.45);animation:aira-fade .2s ease-out}
+dialog.aira-dlg h2,dialog.aira-dlg h3{color:#111!important;font-family:"Segoe UI",Arial,sans-serif!important;font-weight:800!important}
+dialog.aira-dlg button{position:relative!important;overflow:hidden!important;font:600 14px/1.2 "Segoe UI",Arial,sans-serif!important;text-shadow:none!important;letter-spacing:normal!important;text-transform:none!important;border-radius:10px!important;padding:9px 18px!important;cursor:pointer!important;background:#fff!important;color:#1d2939!important;border:1px solid #d0d5dd!important;box-shadow:none!important;opacity:1!important;transition:transform .16s cubic-bezier(.2,.9,.3,1.3),box-shadow .18s,background .18s!important}
+dialog.aira-dlg button[type=submit],dialog.aira-dlg button.aira-primary{background:#f5e62a!important;border-color:#e3d64a!important;color:#111!important;font-weight:800!important}
+dialog.aira-dlg button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px rgba(17,17,17,.12)!important}
+dialog.aira-dlg button[type=submit]:hover:not(:disabled){background:#ffe94d!important}
+dialog.aira-dlg button:active:not(:disabled){transform:scale(.97);transition-duration:.08s!important}
+dialog.aira-dlg button:disabled{opacity:.55!important;cursor:not-allowed!important}
+dialog.aira-dlg button:focus-visible{outline:2px solid #111!important;outline-offset:2px}
+dialog.aira-dlg input[type=text],dialog.aira-dlg input[type=password],dialog.aira-dlg input:not([type]),dialog.aira-dlg textarea{border-radius:8px!important;transition:border-color .15s,box-shadow .15s!important}
+dialog.aira-dlg input:focus,dialog.aira-dlg textarea:focus{outline:0!important;border-color:#b8a90f!important;box-shadow:0 0 0 3px rgba(245,230,42,.5)!important}
+dialog.aira-dlg input[type=radio],dialog.aira-dlg input[type=checkbox]{accent-color:#111}
+dialog.aira-dlg [role=alert]:not([hidden]){animation:aira-shake .3s}
+.aira-ripple{position:absolute;border-radius:50%;pointer-events:none;background:rgba(17,17,17,.12);transform:scale(0);animation:aira-ripple .55s ease-out forwards}
+@keyframes aira-pop{from{transform:translateY(10px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+@keyframes aira-fade{from{opacity:0}to{opacity:1}}
+@keyframes aira-ripple{to{transform:scale(1);opacity:0}}
+@keyframes aira-shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){dialog.aira-dlg,dialog.aira-dlg *,dialog.aira-dlg::backdrop{animation:none!important;transition:none!important}}`;
+function airaDialog(){
+ if(!document.getElementById('aira-ui-style')){const st=document.createElement('style');st.id='aira-ui-style';st.textContent=AIRA_CSS;(document.head||document.documentElement).append(st);
+  document.addEventListener('pointerdown',e=>{const b=e.target.closest?.('dialog.aira-dlg button');if(!b||b.disabled)return;try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch{}
+   const r=b.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2,sp=document.createElement('span');sp.className='aira-ripple';sp.setAttribute('aria-hidden','true');
+   sp.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-r.left-size/2)+'px;top:'+(e.clientY-r.top-size/2)+'px';b.append(sp);setTimeout(()=>sp.remove(),600);},true);}
+ const d=document.createElement('dialog');d.classList.add('aira-dlg');return d;
+}
 // CSS halaman INLINE mengubah warna/huruf tombol dan isian. Semua gaya dialog script dikunci dengan !important.
 function lockDialogStyle(root){
  const base={'font-family':'Arial,Helvetica,sans-serif','text-shadow':'none','letter-spacing':'normal','text-transform':'none','box-shadow':'none'};
  for(const el of [root,...root.querySelectorAll('*')]){
   const own=[...el.style].map(p=>[p,el.style.getPropertyValue(p)]);
-  if(/^(BUTTON|INPUT|TEXTAREA|SELECT|LABEL|H2|H3|P|DIV|SPAN|B|SMALL|FORM)$/.test(el.tagName))for(const [k,v] of Object.entries(base))if(!el.style.getPropertyValue(k))el.style.setProperty(k,v,'important');
-  if(/^(BUTTON|INPUT|TEXTAREA|SELECT)$/.test(el.tagName)){if(!el.style.getPropertyValue('color'))el.style.setProperty('color','#24344a','important');if(!el.style.getPropertyValue('background'))el.style.setProperty('background',el.tagName==='BUTTON'?'#e4e7ec':'#fff','important');el.style.setProperty('opacity','1','important');}
-  for(const [k,v] of own)el.style.setProperty(k,v,'important');
+  if(/^(INPUT|TEXTAREA|SELECT|LABEL|H2|H3|P|DIV|SPAN|B|SMALL|FORM)$/.test(el.tagName))for(const [k,v] of Object.entries(base))if(!el.style.getPropertyValue(k))el.style.setProperty(k,v,'important');
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)){if(!el.style.getPropertyValue('color'))el.style.setProperty('color','#24344a','important');if(!el.style.getPropertyValue('background'))el.style.setProperty('background',el.tagName==='BUTTON'?'#e4e7ec':'#fff','important');el.style.setProperty('opacity','1','important');}
+  if(el.tagName==='BUTTON'){for(const p of ['background','color','border','padding','border-radius','font','opacity','box-shadow'])el.style.removeProperty(p);continue;}
+  for(const [k,v] of own)if(!(el===root&&/^border/.test(k)))el.style.setProperty(k,v,'important');
  }
  root.style.setProperty('color','#24344a','important');
 }
@@ -154,7 +184,7 @@ if(window!==window.top)return;
 function openSettings(first){
  if(document.getElementById('inline-settings-dialog'))return;
  const {shared,sharedDrive}=loadConfig();
- const d=document.createElement('dialog');d.id='inline-settings-dialog';
+ const d=airaDialog();d.id='inline-settings-dialog';
  d.style.cssText='width:min(620px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
  const field=(id,label,value,hint,type='text')=>`<label for="${id}" style="display:block;font-weight:bold;margin-top:12px">${label}</label><input id="${id}" type="${type}" autocomplete="off" spellcheck="false" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 2px;padding:9px;border:1px solid #9caabc;border-radius:6px;font:13px monospace" value="${String(value).replace(/"/g,'&quot;')}"><div style="color:#667;font-size:12px">${hint}</div>`;
  const cur=k=>GM_getValue(CFG[k],'');
@@ -440,7 +470,7 @@ function driveProvince(value){
 }
 function driveBase64(bytes){let text='';for(let i=0;i<bytes.length;i+=32768)text+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(text);}
 function driveResult(message,url){
- const dialog=document.createElement('dialog');dialog.style.cssText='max-width:600px;width:80vw;padding:24px;border:0;border-radius:12px;font:14px/1.5 Arial;color:#24344a';
+ const dialog=airaDialog();dialog.style.cssText='max-width:600px;width:80vw;padding:24px;border:0;border-radius:12px;font:14px/1.5 Arial;color:#24344a';
  const text=document.createElement('p');text.style.whiteSpace='pre-wrap';text.textContent=message;dialog.append(text);
  if(url){const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Buka folder di Google Drive';dialog.append(a);}
  const close=document.createElement('button');close.textContent='Tutup';close.style.cssText='display:block;margin-top:18px;padding:8px 20px';close.onclick=()=>{dialog.close();dialog.remove();};dialog.append(close);dialog.addEventListener('cancel',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
@@ -448,7 +478,7 @@ function driveResult(message,url){
 
 const driveInlineDialogs=new Map();
 function openInlineDrivePopup(job){
- const dialog=document.createElement('dialog');dialog.style.cssText='width:min(840px,94vw);height:min(760px,90vh);padding:18px;border:0;border-radius:12px;box-sizing:border-box;color:#24344a;background:white;font:14px/1.5 Arial';
+ const dialog=airaDialog();dialog.style.cssText='width:min(840px,94vw);height:min(760px,90vh);padding:18px;border:0;border-radius:12px;box-sizing:border-box;color:#24344a;background:white;font:14px/1.5 Arial';
  const heading=document.createElement('h2');heading.textContent='Simpan Lampiran ke Google Drive';heading.style.margin='0 0 8px';dialog.append(heading);
  const status=document.createElement('p');status.textContent='Menyiapkan PDF dan memeriksa akun Google...';dialog.append(status);
  const auth=document.createElement('div');auth.hidden=true;
@@ -507,30 +537,58 @@ async function writeDrive(province,folder,files,button,job){
 function regionLookup(point,choose=false,screen=""){return new Promise((resolve,reject)=>{const nonce=crypto.randomUUID();let timer;const handler=e=>{let v;try{v=JSON.parse(e.detail);}catch{return;}if(v.nonce!==nonce)return;clearTimeout(timer);document.removeEventListener('INLINE_REGION_RESPONSE',handler);v.error?reject(Error(v.error)):resolve(v.result);};document.addEventListener('INLINE_REGION_RESPONSE',handler);timer=setTimeout(()=>{document.removeEventListener('INLINE_REGION_RESPONSE',handler);reject(Error('Pengecekan wilayah belum merespons. Pastikan script INLINE Data Wilayah Sumur aktif dan data wilayah sudah diimpor.'));},300000);document.dispatchEvent(new CustomEvent('INLINE_REGION_REQUEST',{detail:JSON.stringify({nonce,point,choose,screen})}));});}
 
 // R20: tinjau/ubah Catatan Master data (otomatis: [Akuifer Bebas,] CAT, Zona, Debit optimum) sebelum dikirim.
-function chooseMasterNote(auto){
+const NOTE_MANAGED=/^(?:Akuifer Bebas,\s*)?CAT\s+[^,\r\n]+,\s*(?:Akuifer Tertekan (?:Atas dan Akuifer Tertekan Tengah|Atas|Tengah),\s*)?Zona\s+[^,\r\n]+,\s*Debit optimum\s+\d+(?:[.,]\d+)?\s+m3\/hari(?:;\s*Rentang screen evaluator:.*)?$/i;
+const noteNorm=t=>String(t||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join('\n');
+// Baca catatan yang sudah ada di baris Master data (dipakai saat revisi). Gagal membaca -> null (pop up tetap jalan seperti biasa).
+async function readMasterNote(row,tracking){
+ try{
+  const r=await new Promise((resolve,reject)=>GM_xmlhttpRequest({method:'POST',url:WEB_APP_URL,headers:{'Content-Type':'application/json'},data:JSON.stringify({token:TOKEN,action:'baca_catatan',data:{targetRow:row,tracking}}),timeout:30000,
+   onload:x=>{try{const v=JSON.parse(x.responseText);v.ok?resolve(v):reject(Error(v.message||'Gagal membaca catatan.'));}catch(e){reject(e);}},onerror:()=>reject(Error('Koneksi gagal.')),ontimeout:()=>reject(Error('Waktu habis.'))}));
+  return r;
+ }catch(e){if(/Nomor baris/.test(e.message))throw e;return null;}
+}
+// Pop up Catatan Master data. Bila baris sudah berisi catatan (revisi), catatan terakhir ditampilkan dan menjadi isi awal;
+// evaluator cukup menambah/merevisi. Hasil: {text, utuh:true} bila evaluator melihat seluruh isi sel (ditulis apa adanya).
+function chooseMasterNote(auto,last){
  return new Promise(resolve=>{
-  const d=document.createElement('dialog');
-  d.style.cssText='width:min(620px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
+  const known=typeof last==='string',prev=noteNorm(last),hasPrev=known&&!!prev;
+  const d=airaDialog();
+  d.style.cssText='width:min(660px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
   d.innerHTML=`<form method="dialog"><h3 style="margin:0 0 4px;font-size:18px">Catatan (Master data)</h3>
-  <p style="margin:0 0 10px;color:#556;font-size:13px">Isi otomatis dari hasil cek wilayah. Ubah atau tambahkan catatan bila perlu (boleh beberapa baris).</p>
+  <p style="margin:0 0 10px;color:#556;font-size:13px">${hasPrev?'Baris ini sudah memiliki catatan. Tambahkan atau revisi seperlunya; bila tidak diubah, catatan tetap sama.':'Isi otomatis dari hasil cek wilayah. Ubah atau tambahkan catatan bila perlu (boleh beberapa baris).'}</p>
+  ${hasPrev?`<div style="margin:0 0 10px;padding:10px 12px;border:1px solid #eee7a0;border-radius:10px;background:#fffbd1"><div style="font-size:11.5px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#6b6413;margin-bottom:4px">Catatan terakhir</div><div data-a="prev" style="white-space:pre-wrap;font-size:13.5px;color:#1d2939"></div></div>
+  <div style="margin:0 0 10px;padding:8px 12px;border:1px dashed #d0d5dd;border-radius:10px;font-size:12.5px;color:#475467"><b>Catatan otomatis terbaru:</b> <span data-a="auto"></span></div>`:''}
   <textarea rows="5" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #9caabc;border-radius:6px;font:14px/1.5 Arial,sans-serif;resize:vertical"></textarea>
+  <div data-a="state" style="margin-top:6px;font-size:12.5px;font-weight:bold"></div>
   <div role="alert" hidden style="color:#b42318;margin-top:6px"></div>
-  <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap"><button type="button" data-a="reset" style="padding:9px 14px;border:1px solid #9caabc;border-radius:6px;background:#fff;cursor:pointer">Kembalikan otomatis</button>
-  <span style="display:flex;gap:8px"><button type="button" data-a="cancel" style="padding:9px 16px;border:0;border-radius:6px;background:#e4e7ec;cursor:pointer">Batal</button><button type="submit" style="padding:9px 16px;border:0;border-radius:6px;background:#1f6f43;color:#fff;font-weight:bold;cursor:pointer">Lanjut</button></span></div></form>`;
-  const ta=d.querySelector('textarea'),err=d.querySelector('[role=alert]');ta.value=auto||'';let done=false;
-  const finish=v=>{if(done)return;done=true;d.close();d.remove();resolve(v);};
-  d.querySelector('[data-a=reset]').onclick=()=>{ta.value=auto||'';ta.focus();};
-  d.querySelector('[data-a=cancel]').onclick=()=>finish(null);d.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
-  d.querySelector('form').onsubmit=e=>{e.preventDefault();const v=ta.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join('\n');
+  <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap"><span style="display:flex;gap:8px;flex-wrap:wrap">${hasPrev?'<button type="button" data-a="sync" title="Ganti baris CAT, zona, dan debit optimum lama dengan hasil cek terbaru; catatan lain tetap">Perbarui</button><button type="button" data-a="reset">Kembalikan catatan terakhir</button>':'<button type="button" data-a="reset">Kembalikan otomatis</button>'}</span>
+  <span style="display:flex;gap:8px"><button type="button" data-a="cancel">Batal</button><button type="submit">Lanjut</button></span></div></form>`;
+  const q=x=>d.querySelector(x),ta=q('textarea'),err=q('[role=alert]'),state=q('[data-a=state]');
+  const start=hasPrev?prev:(auto||'');ta.value=start;
+  if(hasPrev){q('[data-a=prev]').textContent=prev;q('[data-a=auto]').textContent=auto||'-';}
+  const base=hasPrev?prev:'';
+  const show=()=>{const now=noteNorm(ta.value);
+   if(!hasPrev){state.textContent='';return;}
+   if(now===base){state.style.color='#067647';state.textContent='✓ Catatan tetap (tidak ada revisi/penambahan)';}
+   else{state.style.color='#93370d';const add=now.startsWith(base);state.textContent=add?'✎ Ada penambahan catatan':'✎ Catatan direvisi';}};
+  ta.addEventListener('input',show);show();
+  let done=false;const finish=v=>{if(done)return;done=true;d.close();d.remove();resolve(v);};
+  q('[data-a=reset]').onclick=()=>{ta.value=start;show();ta.focus();};
+  if(hasPrev)q('[data-a=sync]').onclick=()=>{
+   // Ganti baris catatan otomatis lama (CAT, zona, debit optimum) dengan hasil cek terbaru; baris lain tetap.
+   const lines=ta.value.split(/\r?\n/);let hit=false;const out=lines.map(l=>{if(!hit&&NOTE_MANAGED.test(l.trim())){hit=true;return auto;}return l;});
+   ta.value=hit?out.join('\n'):(auto+(ta.value.trim()?'\n'+ta.value:''));show();ta.focus();};
+  q('[data-a=cancel]').onclick=()=>finish(null);d.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
+  q('form').onsubmit=e=>{e.preventDefault();const v=noteNorm(ta.value);
    if(!v){err.hidden=false;err.textContent='Catatan tidak boleh kosong.';return;}
    if(v.length>5000){err.hidden=false;err.textContent='Catatan maksimal 5.000 karakter.';return;}
-   finish(v);};
+   finish({text:v,utuh:known,changed:hasPrev?v!==base:true,hadPrev:hasPrev});};
   lockDialogStyle(d);document.body.append(d);d.showModal();ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
  });
 }
 function chooseTargetRow(){
  return new Promise(resolve=>{
-  const dialog=document.createElement('dialog');
+  const dialog=airaDialog();
   dialog.style.cssText='width:min(600px,calc(100vw - 40px));max-height:85vh;overflow:auto;box-sizing:border-box;border:0;border-radius:12px;padding:24px;background:white;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
   dialog.innerHTML=`<form novalidate><h2 style="margin:0 0 16px;font-size:20px">Silakan masukkan nomor baris</h2><label for="inline-target-row">Nomor baris pada Google Sheets</label><input id="inline-target-row" type="text" inputmode="numeric" autocomplete="off" style="display:block;width:100%;box-sizing:border-box;margin:6px 0 14px;padding:10px;border:1px solid #9caabc;border-radius:6px;font:inherit" autofocus><ul style="margin:0;padding-left:20px"><li style="margin-bottom:10px">Sebelum mengirimkan Data Teknis Input Evaluator ke Form Data Evaluator, silakan masukkan nama evaluator secara manual terlebih dahulu pada Master Data sebagai informasi bahwa baris tersebut akan digunakan oleh evaluator untuk pengisian informasi permohonan.</li><li style="margin-bottom:10px">Pastikan nomor baris yang digunakan adalah <strong>nomor baris pada Google Sheets</strong>, bukan nomor baris pada kolom &quot;No&quot;.</li><li>Pastikan nomor baris yang dimasukkan telah sesuai dengan tujuan baris pada Form Data Evaluator, kesalahan pengisian nomor baris dapat menyebabkan tumpang tindih dengan data yang telah terisi oleh evaluator lain.</li></ul><p role="alert" style="color:#b42318;margin:12px 0" hidden></p><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button type="button" style="padding:9px 18px">Batal</button><button type="submit" style="padding:9px 18px;background:#244b8c;color:white;border:0;border-radius:6px">Lanjutkan</button></div></form>`;
   const input=dialog.querySelector('input'),error=dialog.querySelector('[role="alert"]');
@@ -568,8 +626,11 @@ async function complete(clicked){
  if(selected===null)return;
  if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
  data.targetRow=Number(selected);
- {const note=await chooseMasterNote(data.wilayah.catatan);if(note===null)return;data.wilayah.catatan=note;}
- if(!confirm('Kirim ke Sheets bersama, baris '+data.targetRow+'?\n'+data.nama+' | '+data.sumur+'\nID: '+data.id+' | Tracking: '+data.tracking+'\n'+data.jenis+' | Akuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\n'+data.wilayah.catatan))return;
+ {const cur=await readMasterNote(data.targetRow,data.tracking);
+  if(cur&&cur.tracking&&data.tracking&&cur.tracking!==data.tracking)throw Error('Baris '+data.targetRow+' sudah berisi tracking '+cur.tracking+'. Pilih baris lain.');
+  const note=await chooseMasterNote(data.wilayah.catatan,cur?cur.catatan:undefined);if(note===null)return;
+  data.wilayah.catatan=note.text;data.wilayah.catatanUtuh=note.utuh;data.catatanInfo=note.hadPrev?(note.changed?'Catatan: diperbarui':'Catatan: tetap (tidak berubah)'):'';}
+ if(!confirm('Kirim ke Sheets bersama, baris '+data.targetRow+'?\n'+data.nama+' | '+data.sumur+'\nID: '+data.id+' | Tracking: '+data.tracking+'\n'+data.jenis+' | Akuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\n'+(data.catatanInfo?data.catatanInfo+'\n':'')+data.wilayah.catatan))return;
  alert(await send(data));
 }
 function button(text,bottom,fn){const b=document.createElement('button');b.textContent=text;b.style.cssText='position:fixed;right:25px;bottom:'+bottom+'px;z-index:99999;background:#244b8c;color:white;padding:12px;border:0;border-radius:8px;cursor:pointer';document.body.append(b);b.onclick=async()=>{const clicked=today();b.disabled=true;b.textContent='Memproses…';try{await fn(b,clicked);}catch(e){alert(e.message);}finally{b.disabled=false;b.textContent=text;}};return b;}
@@ -591,7 +652,7 @@ function imbuhanCoord(text){
 // R20: pilihan Catatan untuk tab Sumur Imbuhan/Pantau ("Sesuai" atau catatan sendiri).
 function chooseImbuhanNote(){
  return new Promise(resolve=>{
-  const d=document.createElement('dialog');
+  const d=airaDialog();
   d.style.cssText='width:min(520px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
   d.innerHTML=`<form method="dialog"><h3 style="margin:0 0 10px;font-size:18px">Catatan evaluasi</h3>
   <label style="display:flex;gap:8px;align-items:center;padding:6px 0;cursor:pointer"><input type="radio" name="n" value="ok" checked> <b>Sesuai</b></label>
@@ -665,7 +726,10 @@ async function completeSetuju(clicked){
  const selected=await chooseTargetRow();if(selected===null)return;
  if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
  data.targetRow=Number(selected);
- {const note=await chooseMasterNote(data.wilayah.catatan);if(note===null)return;data.wilayah.catatan=note;}
+ {const cur=await readMasterNote(data.targetRow,data.tracking);
+  if(cur&&cur.tracking&&data.tracking&&cur.tracking!==data.tracking)throw Error('Baris '+data.targetRow+' sudah berisi tracking '+cur.tracking+'. Pilih baris lain.');
+  const note=await chooseMasterNote(data.wilayah.catatan,cur?cur.catatan:undefined);if(note===null)return;
+  data.wilayah.catatan=note.text;data.wilayah.catatanUtuh=note.utuh;data.catatanInfo=note.hadPrev?(note.changed?'Catatan: diperbarui':'Catatan: tetap (tidak berubah)'):'';}
  if(!confirm('Kirim Persetujuan ke Master data, baris '+data.targetRow+'?\n'+data.nama+' | Sumur '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+data.peruntukan+' ('+data.klasifikasi+')\nAkuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nMasa berlaku: '+(typeof masa==='number'?masa+' tahun':masa)+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.lokasi+'\n'+w.catatan+(data.telp&&data.email?'':'\n\nCatatan: telepon/email profil tidak terbaca; kolom tersebut dikosongkan.')))return;
  alert(await send(data));
 }
@@ -729,7 +793,7 @@ async function dewLoadWells(tableUrl){
 }
 function dewChooseTargetRow(){
  return new Promise(resolve=>{
-  const dialog=document.createElement('dialog');
+  const dialog=airaDialog();
   dialog.style.cssText='width:min(600px,calc(100vw - 40px));max-height:85vh;overflow:auto;box-sizing:border-box;border:0;border-radius:12px;padding:24px;background:white;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
   dialog.innerHTML=`<form novalidate><h2 style="margin:0 0 16px;font-size:20px">Silakan masukkan nomor baris awal</h2><label for="inline-target-row">Nomor baris pada Google Sheets</label><input id="inline-target-row" type="text" inputmode="numeric" autocomplete="off" style="display:block;width:100%;box-sizing:border-box;margin:6px 0 14px;padding:10px;border:1px solid #9caabc;border-radius:6px;font:inherit" autofocus><label for="inline-dew-method">Metode Dewatering</label><textarea id="inline-dew-method" required rows="3" style="display:block;width:100%;box-sizing:border-box;margin:6px 0 14px;padding:10px;font:inherit"></textarea><label for="inline-dew-pump">Jenis dan Kapasitas Pompa (sertakan satuan)</label><textarea id="inline-dew-pump" required rows="2" style="display:block;width:100%;box-sizing:border-box;margin:6px 0 14px;padding:10px;font:inherit"></textarea><label for="inline-dew-purpose">Keterangan/Peruntukan</label><textarea id="inline-dew-purpose" required rows="3" style="display:block;width:100%;box-sizing:border-box;margin:6px 0 14px;padding:10px;font:inherit"></textarea><ul style="margin:0;padding-left:20px"><li style="margin-bottom:10px">Sebelum mengirimkan Data Permohonan Dewatering ke Form Data Dewatering, silakan masukkan nama evaluator secara manual terlebih dahulu pada Sheets Dewatering sebagai informasi bahwa baris tersebut akan digunakan oleh evaluator untuk pengisian informasi permohonan.</li><li style="margin-bottom:10px">Pastikan nomor baris yang digunakan adalah <strong>nomor baris pada Google Sheets</strong>, bukan nomor baris pada kolom &quot;No&quot;.</li><li>Pastikan nomor baris yang dimasukkan telah sesuai dengan tujuan baris pada Form Data Dewatering, kesalahan pengisian nomor baris dapat menyebabkan tumpang tindih dengan data yang telah terisi oleh evaluator lain.</li></ul><p role="alert" style="color:#b42318;margin:12px 0" hidden></p><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button type="button" style="padding:9px 18px">Batal</button><button type="submit" style="padding:9px 18px;background:#244b8c;color:white;border:0;border-radius:6px">Lanjutkan</button></div></form>`;
   const input=dialog.querySelector('input'),error=dialog.querySelector('[role="alert"]');
