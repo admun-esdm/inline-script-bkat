@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.8.3
+// @version      3.8.4
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -495,6 +495,28 @@ async function writeDrive(province,folder,files,button,job){
 
 function regionLookup(point,choose=false,screen=""){return new Promise((resolve,reject)=>{const nonce=crypto.randomUUID();let timer;const handler=e=>{let v;try{v=JSON.parse(e.detail);}catch{return;}if(v.nonce!==nonce)return;clearTimeout(timer);document.removeEventListener('INLINE_REGION_RESPONSE',handler);v.error?reject(Error(v.error)):resolve(v.result);};document.addEventListener('INLINE_REGION_RESPONSE',handler);timer=setTimeout(()=>{document.removeEventListener('INLINE_REGION_RESPONSE',handler);reject(Error('Pengecekan wilayah belum merespons. Pastikan script INLINE Data Wilayah Sumur aktif dan data wilayah sudah diimpor.'));},300000);document.dispatchEvent(new CustomEvent('INLINE_REGION_REQUEST',{detail:JSON.stringify({nonce,point,choose,screen})}));});}
 
+// R20: tinjau/ubah Catatan Master data (otomatis: [Akuifer Bebas,] CAT, Zona, Debit optimum) sebelum dikirim.
+function chooseMasterNote(auto){
+ return new Promise(resolve=>{
+  const d=document.createElement('dialog');
+  d.style.cssText='width:min(620px,calc(100vw - 40px));border:0;border-radius:12px;padding:24px;background:#fff;color:#24344a;font:14px/1.5 Arial,sans-serif;box-shadow:0 16px 60px #0005';
+  d.innerHTML=`<form method="dialog"><h3 style="margin:0 0 4px;font-size:18px">Catatan (Master data)</h3>
+  <p style="margin:0 0 10px;color:#556;font-size:13px">Isi otomatis dari hasil cek wilayah. Ubah atau tambahkan catatan bila perlu (boleh beberapa baris).</p>
+  <textarea rows="5" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid #9caabc;border-radius:6px;font:14px/1.5 Arial,sans-serif;resize:vertical"></textarea>
+  <div role="alert" hidden style="color:#b42318;margin-top:6px"></div>
+  <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap"><button type="button" data-a="reset" style="padding:9px 14px;border:1px solid #9caabc;border-radius:6px;background:#fff;cursor:pointer">Kembalikan otomatis</button>
+  <span style="display:flex;gap:8px"><button type="button" data-a="cancel" style="padding:9px 16px;border:0;border-radius:6px;background:#e4e7ec;cursor:pointer">Batal</button><button type="submit" style="padding:9px 16px;border:0;border-radius:6px;background:#1f6f43;color:#fff;font-weight:bold;cursor:pointer">Lanjut</button></span></div></form>`;
+  const ta=d.querySelector('textarea'),err=d.querySelector('[role=alert]');ta.value=auto||'';let done=false;
+  const finish=v=>{if(done)return;done=true;d.close();d.remove();resolve(v);};
+  d.querySelector('[data-a=reset]').onclick=()=>{ta.value=auto||'';ta.focus();};
+  d.querySelector('[data-a=cancel]').onclick=()=>finish(null);d.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
+  d.querySelector('form').onsubmit=e=>{e.preventDefault();const v=ta.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join('\n');
+   if(!v){err.hidden=false;err.textContent='Catatan tidak boleh kosong.';return;}
+   if(v.length>5000){err.hidden=false;err.textContent='Catatan maksimal 5.000 karakter.';return;}
+   finish(v);};
+  document.body.append(d);d.showModal();ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
+ });
+}
 function chooseTargetRow(){
  return new Promise(resolve=>{
   const dialog=document.createElement('dialog');
@@ -535,6 +557,7 @@ async function complete(clicked){
  if(selected===null)return;
  if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
  data.targetRow=Number(selected);
+ {const note=await chooseMasterNote(data.wilayah.catatan);if(note===null)return;data.wilayah.catatan=note;}
  if(!confirm('Kirim ke Sheets bersama, baris '+data.targetRow+'?\n'+data.nama+' | '+data.sumur+'\nID: '+data.id+' | Tracking: '+data.tracking+'\n'+data.jenis+' | Akuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.wilayah.desa+', '+data.wilayah.kecamatan+', '+data.wilayah.kabupaten+', '+data.wilayah.provinsi+'\n'+data.wilayah.catatan))return;
  alert(await send(data));
 }
@@ -631,6 +654,7 @@ async function completeSetuju(clicked){
  const selected=await chooseTargetRow();if(selected===null)return;
  if(!/^\d+$/.test(selected.trim())||!Number.isSafeInteger(Number(selected))||Number(selected)<2)throw Error('Nomor baris harus bilangan bulat minimal 2.');
  data.targetRow=Number(selected);
+ {const note=await chooseMasterNote(data.wilayah.catatan);if(note===null)return;data.wilayah.catatan=note;}
  if(!confirm('Kirim Persetujuan ke Master data, baris '+data.targetRow+'?\n'+data.nama+' | Sumur '+data.sumur+' | Tracking: '+data.tracking+'\nPeruntukan: '+data.peruntukan+' ('+data.klasifikasi+')\nAkuifer: '+data.akuifer+' | Debit evaluasi: '+data.debit+' m3/hari\nMasa berlaku: '+(typeof masa==='number'?masa+' tahun':masa)+'\nBujur: '+data.lng+' | Lintang: '+data.lat+'\n'+data.lokasi+'\n'+w.catatan+(data.telp&&data.email?'':'\n\nCatatan: telepon/email profil tidak terbaca; kolom tersebut dikosongkan.')))return;
  alert(await send(data));
 }
