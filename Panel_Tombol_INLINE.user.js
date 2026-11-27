@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Panel Tombol
 // @namespace    inline-rekan
-// @version      2.12
+// @version      2.13
 // @description  AIRA — Alat Bantu Verifikasi dan Evaluasi Perizinan Air Tanah (panel tombol INLINE)
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -35,7 +35,7 @@ const TOOLS=[
 const GROUPS=[['evaluasi','Evaluasi'],['lampiran','Lampiran'],['kirim','Kirim data'],['lain','Lainnya']];
 const byLabel=new Map(TOOLS.map((t,i)=>[t[0],{group:t[1],icon:t[2],hint:t[3],order:i}]));
 const key='inline-rekan-panel-collapsed';
-let collapsed=false;try{collapsed=localStorage.getItem(key)==='1';}catch{}
+let collapsed=true;try{const v=sessionStorage.getItem(key);if(v!==null)collapsed=v==='1';}catch{}
 const P='#inline-rekan-tools-panel';
 const css=`
 ${P}{--bg:#fff;--line:#e4e7ec;--head:#fff;--headText:#101828;--sub:#667085;--card:#fff;--cardText:#1d2939;--cardLine:#eaecf0;--hint:#667085;--label:#98a2b3;--primary:#1f6f43;--primaryText:#fff;--primaryHover:#18593a;--foot:#f9fafb;
@@ -216,7 +216,7 @@ const foot=document.createElement('div');foot.className='irp-foot';foot.innerHTM
 foot.prepend(help);
 panel.append(head,body,foot);document.body.append(panel);
 function render(animate){panel.classList.toggle('irp-collapsed',collapsed);if(animate){panel.classList.remove('irp-anim');void panel.offsetWidth;panel.classList.add('irp-anim');}head.setAttribute('aria-expanded',String(!collapsed));head.title=collapsed?'Tampilkan AIRA':'Sembunyikan';}
-head.onclick=()=>{collapsed=!collapsed;render(true);try{localStorage.setItem(key,collapsed?'1':'0');}catch{}};
+head.onclick=()=>{collapsed=!collapsed;render(true);try{sessionStorage.setItem(key,collapsed?'1':'0');}catch{}};
 render();
 function adopt(){
  for(const button of document.querySelectorAll('button')){
