@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Lampiran dan Data Lengkap - Sheets Bersama
 // @namespace    inline-rekan-lengkap
-// @version      3.10.3
+// @version      3.10.4
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
 // @match        https://formgen-perizinan.esdm.go.id/FormgenInline/*
@@ -909,7 +909,9 @@ function chooseRowAndNote({mode='master',auto='',tracking='',tab='Master data'}=
   <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap"><span style="display:flex;gap:8px;flex-wrap:wrap">${mode==='imbuhan'?'':'<button type="button" data-a="sync" hidden title="Ganti baris CAT, zona, dan debit optimum lama dengan hasil cek terbaru; catatan lain tetap">Perbarui</button><button type="button" data-a="reset">Kembalikan otomatis</button>'}</span>
   <span style="display:flex;gap:8px"><button type="button" data-a="cancel">Batal</button><button type="submit">Lanjutkan</button></span></div></form>`;
   const q=x=>d.querySelector(x),row=q('#aira-row'),ta=q('textarea'),err=q('[role=alert]'),state=q('[data-a=state]'),rowstate=q('[data-a=rowstate]'),submit=q('button[type=submit]');
-  let prev=null,known=false,edited=false,checking=null,checkedRow=null,blocked='';
+  let prev=null,known=false,edited=false,checking=null,checkingRow=null,checkedRow=null,blocked='';
+  // Dideklarasikan di luar blok agar bisa dipanggil dari tombol Lanjutkan (sebelumnya: "check is not defined" → tombol macet "Memeriksa…").
+  let check=async()=>{};
   const fail=m=>{err.hidden=false;err.textContent=m;};
   const valid=v=>/^\d+$/.test(v)&&Number.isSafeInteger(Number(v))&&Number(v)>=2;
   const show=()=>{
@@ -925,12 +927,16 @@ function chooseRowAndNote({mode='master',auto='',tracking='',tab='Master data'}=
    q('[data-a=sync]').onclick=()=>{const lines=ta.value.split(/\r?\n/);let hit=false;const out=lines.map(l=>{if(!hit&&NOTE_MANAGED.test(l.trim())){hit=true;return auto;}return l;});ta.value=hit?out.join('\n'):(auto+(ta.value.trim()?'\n'+ta.value:''));edited=true;show();ta.focus();};
    // Baca catatan terakhir setiap kali nomor baris berubah (jeda singkat setelah berhenti mengetik).
    let timer=null;
-   const check=async()=>{
+   check=async()=>{
     const v=row.value.trim();err.hidden=true;blocked='';
     if(!valid(v)){rowstate.textContent=v?'Nomor baris minimal 2':'';return;}
     if(checkedRow===v)return;
+    // Bila baris yang sama sedang diperiksa (mis. blur lalu klik Lanjutkan), tunggu pemeriksaan itu saja — jangan kirim permintaan kedua.
+    if(checking&&checkingRow===v){await checking.catch(()=>{});return;}
     rowstate.style.color='#667085';rowstate.textContent='Memeriksa baris…';const my=v;
-    checking=readMasterNote(Number(v),tracking).catch(e=>({error:e.message}));const cur=await checking;checking=null;
+    // Batas waktu di sisi browser agar tidak menggantung bila jaringan/Apps Script tidak menjawab.
+    const req=Promise.race([readMasterNote(Number(v),tracking),new Promise((_,no)=>setTimeout(()=>no(Error('Waktu habis saat memeriksa baris. Coba klik Lanjutkan lagi.')),40000))]).catch(e=>({error:e.message}));
+    checking=req;checkingRow=v;let cur;try{cur=await req;}finally{if(checking===req){checking=null;checkingRow=null;}}
     if(row.value.trim()!==my)return;checkedRow=my;
     if(!cur){known=false;prev=null;rowstate.style.color='#93370d';rowstate.textContent='Catatan lama tidak dapat dibaca; catatan otomatis dipakai';q('[data-a=prevbox]').hidden=true;q('[data-a=autobox]').hidden=true;q('[data-a=sync]').hidden=true;if(!edited)ta.value=auto||'';show();return;}
     if(cur.error){rowstate.textContent='';blocked=cur.error;fail(cur.error);return;}
@@ -958,7 +964,12 @@ function chooseRowAndNote({mode='master',auto='',tracking='',tab='Master data'}=
     if(text.length>5000){fail('Catatan maksimal 5.000 karakter.');return;}
     return finish({row:Number(v),note:custom?text:'Sesuai'});
    }
-   if(checkedRow!==v){submit.disabled=true;submit.textContent='Memeriksa…';await (async()=>{await check();})();submit.disabled=false;submit.textContent='Lanjutkan';}
+   if(checkedRow!==v){
+    submit.disabled=true;submit.textContent='Memeriksa…';
+    try{await check();}catch(e){fail(e.message||String(e));return;}
+    finally{submit.disabled=false;submit.textContent='Lanjutkan';}
+    if(checkedRow!==v){if(!blocked)fail('Baris belum selesai diperiksa. Klik Lanjutkan lagi.');else fail(blocked);return;}
+   }
    if(blocked){fail(blocked);return;}
    const text=noteNorm(ta.value);
    if(!text){fail('Catatan tidak boleh kosong.');ta.focus();return;}
