@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Unduh KML Lokasi Proyek
 // @namespace    inline-rekan
-// @version      1.34
+// @version      1.35
 // @description  Unduh KML dan cek koordinat sumur dalam poligon data_lokasi_proyek
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -420,10 +420,12 @@ function scaleCalculate(d){
  if(!/^\d{4}-\d{2}-\d{2}/.test(d.date)||d.date.slice(0,10)<='2026-04-01')return 'Tidak dihitung: hanya permohonan setelah 1 April 2026.';
  if(!d.codes.length)return 'Tidak dihitung: KBLI belum terbaca.';
  const groups=[...new Set(d.codes.map(scaleSpecial))];if(groups.length!==1)return 'Tidak dihitung: terdapat beberapa KBLI dengan dasar perhitungan berbeda. Pilih proyek/KBLI yang sesuai secara manual.';
- const special=groups[0];if(d.total===null||special&&(d.land===null||d.building===null))return 'Tidak dihitung: rincian investasi belum lengkap. Isian kosong tidak dianggap nol.';
- const v=special?d.total-d.land-d.building:d.total;if(!Number.isFinite(v)||v<0)return 'Tidak dihitung: nilai investasi tidak valid/negatif.';
+ // Permen Investasi/BKPM 5/2025 Ps. 25 ayat (6): 6 kegiatan (properti, akomodasi, pertanian, perkebunan, peternakan, perikanan budidaya)
+ // memakai total investasi (tanah & bangunan ikut dihitung); KBLI lain memakai total investasi − tanah − bangunan.
+ const special=groups[0];if(d.total===null||!special&&(d.land===null||d.building===null))return 'Tidak dihitung: rincian investasi belum lengkap. Isian kosong tidak dianggap nol.';
+ const v=special?d.total:d.total-d.land-d.building;if(!Number.isFinite(v)||v<0)return 'Tidak dihitung: nilai investasi tidak valid/negatif.';
  const rp=n=>'Rp'+n.toLocaleString('id-ID',{maximumFractionDigits:2});
- return 'Skala usaha berdasarkan Kalkulator Skala Usaha: '+scaleClass(v)+'\nKBLI: '+d.codes.join(', ')+'\nDasar: '+(special?'Total investasi − investasi tanah − investasi bangunan':'Total investasi')+'\nNilai: '+(special?rp(d.total)+' − '+rp(d.land)+' − '+rp(d.building)+' = ':'')+rp(v);
+ return 'Skala usaha berdasarkan Kalkulator Skala Usaha: '+scaleClass(v)+'\nKBLI: '+d.codes.join(', ')+'\nDasar: '+(special?'Total investasi (KBLI properti/akomodasi/pertanian/perkebunan/peternakan/budidaya perikanan: tanah & bangunan ikut dihitung)':'Total investasi − investasi tanah − investasi bangunan')+'\nNilai: '+(special?'':rp(d.total)+' − '+rp(d.land)+' − '+rp(d.building)+' = ')+rp(v);
 }
 function scaleLookup(data){return new Promise((resolve,reject)=>{
  let settled=false;const nonce=crypto.randomUUID();const done=(v,err)=>{if(settled)return;settled=true;clearTimeout(timer);document.removeEventListener('INLINE_SCALE_RESPONSE',handler);err?reject(Error(err)):resolve(v);};
