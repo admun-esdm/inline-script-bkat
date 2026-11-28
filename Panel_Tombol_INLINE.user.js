@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         INLINE Panel Tombol
 // @namespace    inline-rekan
-// @version      2.13
+// @version      2.14
 // @description  AIRA — Alat Bantu Verifikasi dan Evaluasi Perizinan Air Tanah (panel tombol INLINE)
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -24,6 +24,7 @@ const TOOLS=[
  ['Simpan Lampiran ke Drive','lampiran','☁','Simpan ke Google Drive PATGTL'],
  ['Salin Data Teknis Pemohon','evaluasi','⧉','Salin ke Form Isian Evaluator INLINE ESDM'],
  ['Cek Lokasi Sumur','evaluasi','◎','Wilayah, zona, saran debit & masa'],
+ ['Cek Gambar Konstruksi','evaluasi','▤','Isi data teknis dari gambar konstruksi'],
  ['Unduh KML Lokasi Proyek','evaluasi','⌖','KML lokasi proyek OSS'],
  ['Data Lengkap Pengusahaan','kirim','↗','Kirim ke Form Evaluator'],
  ['Data Lengkap Persetujuan','kirim','↗','Kirim ke Form Evaluator'],
@@ -151,6 +152,7 @@ const PETUNJUK=[
  ['Evaluasi',[
   ['Salin Data Teknis Pemohon','⧉','Menyalin data teknis yang diisi pemohon ke Form Isian Evaluator INLINE ESDM.',['Daftar kolom yang akan disalin sebelum diproses','Perbandingan bila isian evaluator sudah berbeda: nilai lama dicoret, nilai pemohon hijau','Pilihan <b>Salin yang kosong saja</b> atau <b>Timpa dengan data pemohon</b>']],
   ['Cek Lokasi Sumur','◎','Memeriksa lokasi setiap sumur dan memberi saran evaluasi.',['Posisi sumur terhadap lokasi proyek OSS','Desa, kecamatan, kabupaten/kota, provinsi','CAT, zona konservasi, dan debit optimum','Kawasan industri, zona bebas air tanah, skala usaha dari database izin','Saran debit dan masa berlaku, lalu tombol <b>Isi Otomatis</b> (Debit Hasil Evaluasi, Volume Harian, masa berlaku, skala, alamat) — semua nilai bisa diedit dulu'],'Perlu Data Wilayah diimpor sekali di PC ini. Hasil cek adalah saran, tetap diperiksa.'],
+  ['Cek Gambar Konstruksi','▤','Membuka gambar konstruksi dari lampiran permohonan berdampingan dengan isian data teknis, lalu mengisikannya ke Data Teknis Input Evaluator INLINE.',['Dokumen yang dibuka otomatis: persyaratan gambar konstruksi (perpanjangan: Laporan Teknis); lampiran lain bisa dipilih','Isian mengikuti form: Izin Pengusahaan 10 isian, Persetujuan 8, Sumur Pantau/Imbuhan 7','Data pemohon tampil di bawah tiap isian; yang berbeda ditandai oranye','Bila Isian Evaluator sudah terisi dan berbeda, muncul konfirmasi <b>Simpan</b> sebelum ditimpa'],'Buka Data Teknis evaluator dulu. Setelah terisi, simpan seperti biasa di form INLINE. Tidak tersedia untuk Dewatering.'],
   ['Unduh KML Lokasi Proyek','⌖','Mengunduh file KML lokasi proyek dari OSS untuk dibuka di Google Earth atau aplikasi GIS.',['File .kml lokasi proyek tersimpan di folder unduhan']]
  ]],
  ['Lampiran',[

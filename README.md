@@ -1,14 +1,18 @@
-# Script INLINE (Tampermonkey)
+# AIRA — Asisten Izin aiR tAnah
+
+> **Evaluator: silakan buka halaman pasang ini → https://admun-esdm.github.io/inline-script-bkat/**  
+> Panduan lengkap bergambar tersedia dari pengelola AIRA (Balai Konservasi Air Tanah).
 
 Klik **Pasang** pada setiap baris, lalu pilih **Install / Update / Reinstall** di halaman Tampermonkey. Setelah terpasang, script diperbarui otomatis.
 
 | Script | Versi | Fungsi | Pasang |
 |---|---|---|---|
-| INLINE Lampiran dan Data Lengkap - Sheets Bersama | 3.10.3 | Lampiran dan Data Lengkap (Download/Drive Lampiran, Data Lengkap Pengusahaan/Dewatering/Sumur Pantau-Imbuhan/Persetujuan, Pengembalian) | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lengkap_Pengusahaan_Bersama.user.js) |
-| INLINE Unduh KML Lokasi Proyek | 1.34 | Cek Lokasi Sumur, saran debit & masa berlaku, Isi Otomatis, Unduh KML | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lokasi_Proyek_KML.user.js) |
+| INLINE Lampiran dan Data Lengkap - Sheets Bersama | 3.10.4 | Lampiran dan Data Lengkap (Download/Drive Lampiran, Data Lengkap Pengusahaan/Dewatering/Sumur Pantau-Imbuhan/Persetujuan, Pengembalian) | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lengkap_Pengusahaan_Bersama.user.js) |
+| INLINE Unduh KML Lokasi Proyek | 1.35 | Cek Lokasi Sumur, saran debit & masa berlaku, Isi Otomatis, Unduh KML | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Lokasi_Proyek_KML.user.js) |
 | INLINE Data Wilayah Sumur | 1.3.13 | Data wilayah (desa, CAT, zona) untuk Cek Lokasi Sumur dan Data Lengkap | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Wilayah_Sumur.user.js) |
 | INLINE Salin Data Teknis Pemohon | 1.4 | Salin Data Teknis pemohon ke isian evaluator | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Salin_Data_Teknis_Pemohon.user.js) |
-| INLINE Panel Tombol | 2.12 | Panel tombol yang dapat diminimalkan | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Panel_Tombol_INLINE.user.js) |
+| AIRA Cek Gambar Konstruksi | 1.0 | Cek Gambar Konstruksi: gambar konstruksi + isian data teknis, isi otomatis ke Data Teknis INLINE | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Cek_Gambar_Konstruksi.user.js) |
+| INLINE Panel Tombol | 2.14 | Panel tombol yang dapat diminimalkan | [Pasang](https://raw.githubusercontent.com/admun-esdm/inline-script-bkat/main/Panel_Tombol_INLINE.user.js) |
 
 ## Setelah memasang
 1. Refresh halaman INLINE.
