@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AIRA Cek Gambar Konstruksi
 // @namespace    inline-rekan
-// @version      1.2
+// @version      1.3
 // @description  Pop up gambar konstruksi + isian data teknis, lalu isi otomatis ke Data Teknis Input Evaluator INLINE
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinStaf/*
 // @match        https://ngantor.esdm.go.id/inline/internal/PermohonanIzinPre/*
@@ -385,8 +385,11 @@ const CSS=`:host{all:initial}*{box-sizing:border-box}
 .tip{background:#fffbe6;border:1px solid #f2e27a;border-radius:10px;padding:9px 12px;font-size:12.5px;line-height:1.5;color:#5c4d00}.tip b{color:#000}
 .chips{display:flex;gap:6px;margin-top:6px;align-items:center}.chips button{all:unset;cursor:pointer;border:1px solid #d0d5dd;background:#fff;border-radius:7px;padding:3px 9px;font-weight:700;font-size:12.5px;color:#101828}.chips button:hover{background:#FFF500}.chips em{font-style:normal;color:#667085;font-size:12px}
 .na{font-size:12.5px;color:#475467;background:#f2f4f7;border-radius:10px;padding:9px 12px}
-.ft{display:flex;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid #eaecf0;background:#fcfcfd}.ft .nt{font-size:13px;color:#667085;margin-right:auto}.ft .nt b{color:#B54708}
-.btn{all:unset;cursor:pointer;padding:10px 18px;border-radius:10px;border:1px solid #d0d5dd;font-weight:700;font-size:14.5px;background:#fff;color:#101828}.btn:hover{background:#f9fafb}.btn.p{background:#FFF500;border-color:#e3cf00}.btn.p:hover{background:#f5e900}.btn[disabled]{opacity:.5;cursor:default}
+.ft{display:flex;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid #eaecf0;background:#fcfcfd}.ft .nt{flex:1;min-width:0;font-size:13px;line-height:1.4;color:#667085;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ft .nt b{color:#B54708}
+.btn{all:unset;box-sizing:border-box;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 18px;white-space:nowrap;cursor:pointer;border-radius:10px;border:1px solid #d0d5dd;font:700 14px/1 "Segoe UI",Arial,sans-serif;background:#fff;color:#101828;box-shadow:0 1px 2px rgba(16,24,40,.06);transition:background .12s,box-shadow .12s,transform .08s}
+.btn:hover{background:#f9fafb}.btn:active{transform:translateY(1px)}.btn:focus-visible{outline:3px solid rgba(255,245,0,.6);outline-offset:1px}
+.btn.p{background:#FFF500;border-color:#e3cf00;color:#000}.btn.p:hover{background:#f5e900;box-shadow:0 4px 12px rgba(227,207,0,.35)}.btn[disabled]{opacity:.5;cursor:default}
+.ft .btn.gh{border-color:transparent;background:transparent;box-shadow:none;color:#475467}.ft .btn.gh:hover{background:#f2f4f7}
 .ov{position:absolute;inset:0;background:rgba(16,24,40,.45);display:grid;place-items:center;z-index:9;padding:16px}
 .cf{width:min(760px,100%);max-height:100%;display:flex;flex-direction:column;background:#fff;border-radius:16px;border-top:6px solid #FFF500;box-shadow:0 30px 80px rgba(0,0,0,.45);padding:20px 24px}
 .cf .src{font-size:11px;font-weight:800;letter-spacing:.08em;color:#6b6413;text-transform:uppercase}.cf h3{margin:6px 0 4px;font:800 19px "Segoe UI",Arial}.cf p{margin:0 0 10px;color:#475467;font-size:14px}
@@ -434,7 +437,7 @@ async function openPopup(btn){
    <div class="cv"><div class="msg">Memuat daftar lampiran…</div></div>
    <div class="dd" hidden></div></div>
    <div class="fm">${form}</div></div>
-  <div class="ft"><span class="nt"></span><button class="btn" data-a="close">Batal</button><button class="btn" data-a="draft">Simpan draf</button><button class="btn p" data-a="fill">Isi ke Data Teknis INLINE</button></div>
+  <div class="ft"><span class="nt"></span><button class="btn gh" data-a="close">Batal</button><button class="btn" data-a="draft">Simpan draf</button><button class="btn p" data-a="fill">Isi ke Data Teknis INLINE →</button></div>
  </div></div>`;
  const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)];
  const close=()=>{open=false;host.remove();document.removeEventListener('keydown',onKey,true);};
